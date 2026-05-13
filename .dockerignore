@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.local
+.env.*.local
+dev.db
+prisma/dev.db
+*.log
+.DS_Store
+.vscode
+.idea
+README.md
