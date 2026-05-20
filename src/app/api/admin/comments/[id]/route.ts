@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-
-async function gate() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") return false;
-  return true;
-}
+import { requireAdminApi, idempotentDelete } from "@/lib/admin-guard";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await gate())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await requireAdminApi();
+  if (!gate.ok) return gate.res;
+
   const { id } = await params;
   const body = await req.json().catch(() => null);
   if (typeof body?.hidden !== "boolean") {
     return NextResponse.json({ error: "Bad input" }, { status: 400 });
   }
-  await prisma.comment.update({ where: { id }, data: { hidden: body.hidden } });
+  try {
+    await prisma.comment.update({ where: { id }, data: { hidden: body.hidden } });
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    console.error("[admin] comment PATCH failed:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -28,10 +30,14 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await gate())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await requireAdminApi();
+  if (!gate.ok) return gate.res;
+
   const { id } = await params;
-  await prisma.comment.delete({ where: { id } }).catch(() => {});
+  const failure = await idempotentDelete(
+    () => prisma.comment.delete({ where: { id } }),
+    `comment.delete(${id})`,
+  );
+  if (failure) return failure;
   return NextResponse.json({ ok: true });
 }

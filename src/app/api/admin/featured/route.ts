@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getDetails } from "@/lib/tmdb";
+import { requireAdminApi } from "@/lib/admin-guard";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await requireAdminApi();
+  if (!gate.ok) return gate.res;
+  const { session } = gate;
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad input" }, { status: 400 });
@@ -36,35 +35,41 @@ export async function POST(req: Request) {
     backdropPath = d.backdrop_path;
     voteAverage = d.vote_average ?? 0;
     releaseDate = d.release_date ?? d.first_air_date ?? null;
-  } catch {
+  } catch (err) {
+    console.error("[admin] featured TMDB lookup failed:", err);
     return NextResponse.json(
       { error: "Could not fetch from TMDB" },
       { status: 502 },
     );
   }
 
-  const created = await prisma.featured.upsert({
-    where: { tmdbId_mediaType: { tmdbId, mediaType } },
-    create: {
-      tmdbId,
-      mediaType,
-      title,
-      overview,
-      posterPath,
-      backdropPath,
-      voteAverage,
-      releaseDate,
-      active: true,
-      createdById: session.user.id,
-    },
-    update: {
-      title,
-      overview,
-      posterPath,
-      backdropPath,
-      voteAverage,
-      releaseDate,
-    },
-  });
-  return NextResponse.json({ id: created.id });
+  try {
+    const created = await prisma.featured.upsert({
+      where: { tmdbId_mediaType: { tmdbId, mediaType } },
+      create: {
+        tmdbId,
+        mediaType,
+        title,
+        overview,
+        posterPath,
+        backdropPath,
+        voteAverage,
+        releaseDate,
+        active: true,
+        createdById: session.user.id,
+      },
+      update: {
+        title,
+        overview,
+        posterPath,
+        backdropPath,
+        voteAverage,
+        releaseDate,
+      },
+    });
+    return NextResponse.json({ id: created.id });
+  } catch (err) {
+    console.error("[admin] featured upsert failed:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

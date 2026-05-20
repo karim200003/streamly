@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-
-async function gate() {
-  const session = await auth();
-  return !!(session?.user?.id && session.user.role === "ADMIN");
-}
+import { requireAdminApi, idempotentDelete } from "@/lib/admin-guard";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await gate())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await requireAdminApi();
+  if (!gate.ok) return gate.res;
+
   const { id } = await params;
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad input" }, { status: 400 });
@@ -24,7 +19,15 @@ export async function PATCH(
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
-  await prisma.featured.update({ where: { id }, data });
+  try {
+    await prisma.featured.update({ where: { id }, data });
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    console.error("[admin] featured PATCH failed:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -32,10 +35,14 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await gate())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await requireAdminApi();
+  if (!gate.ok) return gate.res;
+
   const { id } = await params;
-  await prisma.featured.delete({ where: { id } }).catch(() => {});
+  const failure = await idempotentDelete(
+    () => prisma.featured.delete({ where: { id } }),
+    `featured.delete(${id})`,
+  );
+  if (failure) return failure;
   return NextResponse.json({ ok: true });
 }

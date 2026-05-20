@@ -5,11 +5,24 @@ import Link from "next/link";
 import { Play, Star, Calendar, Clock } from "lucide-react";
 import { getDetails, imageUrl, similarFromDetails, type MediaType } from "@/lib/tmdb";
 import { formatRuntime } from "@/lib/utils";
+import dynamic from "next/dynamic";
 import Carousel from "@/components/Carousel";
 import FavoriteButton from "@/components/FavoriteButton";
 import SeasonPicker from "@/components/SeasonPicker";
-import Comments from "@/components/Comments";
 import TrailerButton from "@/components/TrailerButton";
+
+// Comments are below the fold (after hero, cast, seasons) and pull in
+// useSession + a fetch on mount. Deferring their JS chunk shrinks the
+// initial JS sent on every details page view.
+const Comments = dynamic(() => import("@/components/Comments"), {
+  loading: () => (
+    <div className="mt-12 space-y-3">
+      <div className="h-7 w-48 rounded skeleton" />
+      <div className="h-20 rounded-xl skeleton" />
+      <div className="h-20 rounded-xl skeleton" />
+    </div>
+  ),
+});
 
 export const revalidate = 3600;
 

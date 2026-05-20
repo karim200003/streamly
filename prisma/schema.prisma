@@ -89,7 +89,10 @@ model WatchHistory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tmdbId, mediaType, season, episode])
-  @@index([userId])
+  // Backs the "Continue watching" query (ORDER BY updatedAt DESC
+  // WHERE userId = ?). With this composite + DESC sort, Postgres
+  // serves top-N reads as an index range scan, no sort step.
+  @@index([userId, updatedAt(sort: Desc)])
 }
 
 model Comment {

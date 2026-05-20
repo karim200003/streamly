@@ -88,8 +88,8 @@ export async function DELETE(req: Request) {
   ) {
     return NextResponse.json({ error: "Bad input" }, { status: 400 });
   }
-  await prisma.favorite
-    .delete({
+  try {
+    await prisma.favorite.delete({
       where: {
         userId_tmdbId_mediaType: {
           userId: session.user.id,
@@ -97,7 +97,13 @@ export async function DELETE(req: Request) {
           mediaType,
         },
       },
-    })
-    .catch(() => {});
+    });
+  } catch (err) {
+    // P2025 = record not found — idempotent delete, treat as success.
+    if ((err as { code?: string }).code !== "P2025") {
+      console.error("[favorites] delete failed:", err);
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
+  }
   return NextResponse.json({ ok: true });
 }

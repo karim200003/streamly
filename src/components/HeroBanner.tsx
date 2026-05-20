@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { Play, Info, Volume2, VolumeX, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Info, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   imageUrl,
   type TmdbMedia,
@@ -20,94 +20,10 @@ interface Props {
 
 const SLIDE_DURATION = 7000;
 
-function HeroBackdropTrailer({
-  media,
-  imagePriority,
-  muted,
-  onTrailerVisibleChange,
-}: {
-  media: TmdbMedia;
-  imagePriority: boolean;
-  muted: boolean;
-  onTrailerVisibleChange: (visible: boolean) => void;
-}) {
-  const title = getTitle(media);
-  const type = getMediaType(media);
-  const backdrop = imageUrl(media.backdrop_path, "w1280");
-  const [trailerKey, setTrailerKey] = useState<string | null>(null);
-  const [showTrailer, setShowTrailer] = useState(false);
-  const trailerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch(`/api/trailer?tmdbId=${media.id}&mediaType=${type}`, {
-      signal: controller.signal,
-    })
-      .then((r) => r.json())
-      .then(({ key }: { key: string | null }) => {
-        if (!key) return;
-        setTrailerKey(key);
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const small = window.matchMedia("(max-width: 768px)").matches;
-        if (!reduce && !small) {
-          trailerTimerRef.current = setTimeout(() => {
-            setShowTrailer(true);
-            onTrailerVisibleChange(true);
-          }, 2500);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      controller.abort();
-      if (trailerTimerRef.current) clearTimeout(trailerTimerRef.current);
-      onTrailerVisibleChange(false);
-    };
-  }, [media.id, type, onTrailerVisibleChange]);
-
-  const trailerSrc =
-    trailerKey && showTrailer
-      ? `https://www.youtube-nocookie.com/embed/${trailerKey}` +
-        `?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1` +
-        `&playsinline=1&playlist=${trailerKey}` +
-        `&mute=${muted ? 1 : 0}&iv_load_policy=3&disablekb=1&fs=0`
-      : null;
-
-  return (
-    <>
-      {backdrop && !trailerSrc && (
-        <Image
-          src={backdrop}
-          alt={title}
-          fill
-          priority={imagePriority}
-          sizes="100vw"
-          className="object-cover"
-        />
-      )}
-      {trailerSrc && (
-        <iframe
-          key={trailerSrc}
-          src={trailerSrc}
-          title="Trailer preview"
-          allow="autoplay; encrypted-media"
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] pointer-events-none"
-        />
-      )}
-    </>
-  );
-}
-
 export default function HeroBanner({ items }: Props) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [trailerVisible, setTrailerVisible] = useState(false);
-
-  const onTrailerVisibleChange = useCallback((visible: boolean) => {
-    setTrailerVisible(visible);
-  }, []);
 
   const accumulatedRef = useRef(0);
   const touchX = useRef(0);
@@ -116,6 +32,7 @@ export default function HeroBanner({ items }: Props) {
   const title = getTitle(media);
   const year = getReleaseYear(media);
   const type = getMediaType(media);
+  const backdrop = imageUrl(media?.backdrop_path, "w1280");
 
   // Auto-advance with resumable progress tracking via RAF
   useEffect(() => {
@@ -175,12 +92,16 @@ export default function HeroBanner({ items }: Props) {
           transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1] }}
           className="absolute inset-0"
         >
-          <HeroBackdropTrailer
-            media={media}
-            imagePriority={current === 0}
-            muted={muted}
-            onTrailerVisibleChange={onTrailerVisibleChange}
-          />
+          {backdrop && (
+            <Image
+              src={backdrop}
+              alt={title}
+              fill
+              priority={current === 0}
+              sizes="100vw"
+              className="object-cover"
+            />
+          )}
         </m.div>
       </AnimatePresence>
 
@@ -298,17 +219,6 @@ export default function HeroBanner({ items }: Props) {
 
       {/* ── Bottom controls ───────────────────────────────────────── */}
       <div className="absolute bottom-8 right-6 sm:right-10 z-20 flex items-center gap-4">
-        {/* Mute toggle — only when trailer is visible */}
-        {trailerVisible && (
-          <button
-            onClick={() => setMuted((m) => !m)}
-            aria-label={muted ? "Unmute trailer" : "Mute trailer"}
-            className="size-9 grid place-items-center rounded-full glass hover:bg-white/15 active:scale-95 transition-all"
-          >
-            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-          </button>
-        )}
-
         {/* Segmented progress indicators */}
         <div className="flex items-center gap-1.5">
           {items.map((_, i) => (

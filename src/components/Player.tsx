@@ -49,10 +49,18 @@ export default function Player({ servers }: { servers: StreamServer[] }) {
             <iframe
               key={`${current.url}::${reloadKey}`}
               src={current.url}
-              title="Video player"
+              title={`Video player — ${current.name}`}
+              // NOTE: no sandbox attribute. The third-party embed
+              // providers (videasy/vidking/vidfast/etc.) break under
+              // sandbox — they verify event.origin on postMessage
+              // and/or need top-window access for fullscreen handoff,
+              // so a unique-origin sandboxed iframe stops playing.
+              // referrerPolicy="no-referrer" keeps us from leaking our
+              // origin to them, which is the best we can do without
+              // owning the playback layer.
               allow="accelerometer; autoplay; encrypted-media; fullscreen; picture-in-picture"
               allowFullScreen
-              referrerPolicy="origin"
+              referrerPolicy="no-referrer"
               className="absolute inset-0 w-full h-full"
             />
           )}

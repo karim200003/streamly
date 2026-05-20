@@ -99,6 +99,17 @@ export async function getDetails(type: MediaType, id: number) {
   });
 }
 
+/**
+ * Lighter variant used on the /watch page, which only needs title +
+ * poster + a few meta fields. Skips the `append_to_response` payload
+ * (credits/videos/similar) that the details page needs — roughly half
+ * the response size and one round-trip on TMDB's side.
+ */
+export async function getBasicDetails(type: MediaType, id: number) {
+  if (!HAS_KEY) return mock.details(type, id);
+  return tmdb<TmdbDetails>(`/${type}/${id}`);
+}
+
 export async function getSimilar(type: MediaType, id: number) {
   if (!HAS_KEY) return mock.popularMovies;
   const data = await tmdb<TmdbList<TmdbMedia>>(`/${type}/${id}/similar`);

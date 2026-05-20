@@ -44,13 +44,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (user.banned) return null;
         const ok = await bcrypt.compare(password, user.password);
         if (!ok) return null;
-        // Auto-promote on login if email is in ADMIN_EMAILS
-        if (isAdminEmail(user.email) && user.role !== "ADMIN") {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { role: "ADMIN" },
-          });
-        }
+        // NOTE: auto-promotion to ADMIN intentionally does NOT happen on
+        // the Credentials path. Anyone can `POST /api/register` with any
+        // email (no verification today), so promoting on credentials
+        // login would let an attacker pre-register an admin's email and
+        // gain ADMIN on first login. Promotion only fires on OAuth in
+        // the jwt callback below.
         return {
           id: user.id,
           email: user.email,
@@ -70,7 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (dbUser?.banned) return false;
       return true;
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, account, trigger }) {
       // First call after sign-in
       if (user) {
         token.id = (user as { id: string }).id;
@@ -80,12 +79,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.id && (trigger === "signIn" || trigger === "update" || !token.role)) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, banned: true, email: true },
+          select: { role: true, banned: true, email: true, emailVerified: true },
         });
         if (fresh) {
           if (fresh.banned) return null; // forces sign-out
           token.role = fresh.role;
-          if (isAdminEmail(fresh.email) && fresh.role !== "ADMIN") {
+          // Auto-promote ONLY on OAuth sign-in to a verified email. This
+          // blocks the credentials-pre-registration takeover: an attacker
+          // who registers an admin's email via /api/register has
+          // emailVerified=null and account.type !== "oauth", so they
+          // never get promoted. The legitimate admin signing in via
+          // Google (which sets emailVerified) is promoted normally.
+          const isOAuthSignIn =
+            trigger === "signIn" && account?.type === "oauth";
+          if (
+            isOAuthSignIn &&
+            fresh.emailVerified &&
+            isAdminEmail(fresh.email) &&
+            fresh.role !== "ADMIN"
+          ) {
             await prisma.user.update({
               where: { id: token.id as string },
               data: { role: "ADMIN" },

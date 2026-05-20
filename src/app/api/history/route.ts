@@ -106,8 +106,8 @@ export async function DELETE(req: Request) {
   const seasonKey = mediaType === "tv" ? Number(season ?? 0) : 0;
   const episodeKey = mediaType === "tv" ? Number(episode ?? 0) : 0;
 
-  await prisma.watchHistory
-    .delete({
+  try {
+    await prisma.watchHistory.delete({
       where: {
         userId_tmdbId_mediaType_season_episode: {
           userId: session.user.id,
@@ -117,7 +117,12 @@ export async function DELETE(req: Request) {
           episode: episodeKey,
         },
       },
-    })
-    .catch(() => {});
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code !== "P2025") {
+      console.error("[history] delete failed:", err);
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
+  }
   return NextResponse.json({ ok: true });
 }

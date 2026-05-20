@@ -81,11 +81,35 @@ export const commentsDeleteLimiter = build(40, 60 * 60, "rl:comments:del");
 export const favoritesWriteLimiter = build(80, 60 * 60, "rl:fav:write");
 export const historyWriteLimiter = build(200, 60 * 60, "rl:hist:write");
 
+// Admin mutations. Per-admin (cap blast radius if a token is stolen).
+export const adminWriteLimiter = build(120, 60, "rl:admin:write");
+
+/**
+ * Resolve the client IP from request headers, honoring only the headers
+ * our trusted edge sets. `x-forwarded-for` is the well-known footgun
+ * because clients can spoof it; we prefer platform-specific headers
+ * (Cloudflare, Vercel) and, only when they're absent, take the LAST
+ * entry of XFF (the closest hop to us — typically the trusted proxy).
+ *
+ * On bare-metal behind a custom proxy, configure the proxy to overwrite
+ * `x-forwarded-for` and not append (or set a trusted header instead).
+ */
 export function getClientIp(req: Request): string {
+  // Cloudflare
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  // Vercel
+  const vercel = req.headers.get("x-vercel-forwarded-for");
+  if (vercel) return vercel.split(",")[0].trim();
+  // Generic X-Forwarded-For — take RIGHTMOST entry (closest trusted hop),
+  // not leftmost (client-controlled).
   const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
+  if (fwd) {
+    const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
   const real = req.headers.get("x-real-ip");
-  if (real) return real;
+  if (real) return real.trim();
   return "unknown";
 }
 
@@ -98,7 +122,18 @@ export function rateLimitResponse(reset: number) {
       headers: {
         "Content-Type": "application/json",
         "Retry-After": String(retryAfter),
+        "Cache-Control": "no-store",
       },
     },
   );
 }
+
+/**
+ * Standard headers for JSON responses on routes that read or mutate
+ * user-scoped data. Prevents shared proxies / browser BFCache from
+ * serving stale data and prevents accidental caching of authenticated
+ * responses.
+ */
+export const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store",
+} as const;

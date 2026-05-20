@@ -11,14 +11,20 @@ const EMBED_HOSTS = [
   "https://www.youtube-nocookie.com",
 ];
 
-// Content Security Policy. Loose enough to allow Next, TMDB images,
-// inline styles (Tailwind), and the embed iframes — strict everywhere
-// else. `unsafe-inline` for style-src is required by Tailwind v4's
-// runtime; `'self'` for script-src plus `'unsafe-inline'` is the Next.js
-// app-router default. Tighten further (nonces) if you have time.
+// `'unsafe-inline'` in script-src is required by Next's App Router runtime
+// (inline boot script). `'unsafe-eval'` is required by React in DEV ONLY
+// (callstack reconstruction / Turbopack HMR) — we include it in dev and
+// drop it in prod, where React never uses eval. If you adopt nonce-based
+// CSP, replace `'unsafe-inline'` with `'nonce-<value>'` via middleware.
+// `frame-ancestors 'none'` blocks clickjacking; nothing self-iframes.
+const isDev = process.env.NODE_ENV !== "production";
+const scriptSrc = isDev
+  ? `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
+  : `script-src 'self' 'unsafe-inline'`;
+
 const csp = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+  scriptSrc,
   `style-src 'self' 'unsafe-inline'`,
   `img-src 'self' data: blob: https://image.tmdb.org https://lh3.googleusercontent.com https://i.ytimg.com`,
   `font-src 'self' data:`,
@@ -28,7 +34,7 @@ const csp = [
   `object-src 'none'`,
   `base-uri 'self'`,
   `form-action 'self'`,
-  `frame-ancestors 'self'`,
+  `frame-ancestors 'none'`,
   `upgrade-insecure-requests`,
 ].join("; ");
 
@@ -36,7 +42,7 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: csp },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
@@ -45,6 +51,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Emit a self-contained server bundle in `.next/standalone` that
+  // includes only the runtime files actually needed. The Docker image
+  // copies this instead of full `node_modules`, cutting the image from
+  // ~1GB+ to ~150MB and shrinking cold start.
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
