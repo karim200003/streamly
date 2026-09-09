@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { SessionProvider } from "next-auth/react";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import MotionProvider from "@/components/MotionProvider";
+import Wordmark from "@/components/Wordmark";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 // Apple-TV+/Cineby style serif. Used (italic) for big hero titles and
@@ -63,16 +64,11 @@ export default function RootLayout({
             {/* Matches the floating bar's height. Full-bleed pages (the
                 hero, the player) cancel it with -mt-[4.5rem] so their
                 artwork runs behind the bar. */}
-            <main className="flex-1 pt-[4.5rem]">{children}</main>
+            <main className="flex-1 pt-[var(--nav-h)]">{children}</main>
             <footer className="mt-16 border-t border-white/[0.07] py-10 px-6">
               <div className="mx-auto max-w-screen-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--color-muted)]">
                 <div className="flex items-center gap-2 font-semibold tracking-tight text-white/80">
-                  <span
-                    className="grid place-items-center size-6 rounded-md bg-[var(--color-accent)] text-white text-[0.6rem]"
-                    aria-hidden="true"
-                  >
-                    ▶
-                  </span>
+                  <Wordmark className="size-5" />
                   Streamly
                 </div>
                 <div className="flex items-center gap-4">

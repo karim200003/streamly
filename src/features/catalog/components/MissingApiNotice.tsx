@@ -11,7 +11,7 @@ export default function MissingApiNotice() {
         href="https://www.themoviedb.org/settings/api"
         target="_blank"
         rel="noreferrer"
-        className="underline text-[var(--color-accent)]"
+        className="underline text-white/90 hover:text-white"
       >
         themoviedb.org
       </a>{" "}

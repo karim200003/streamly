@@ -53,7 +53,7 @@ export default async function ContinueWatching() {
                   {pct > 0 && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-white/15">
                       <div
-                        className="h-full bg-[var(--color-accent)]"
+                        className="h-full bg-white"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

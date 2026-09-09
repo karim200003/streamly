@@ -120,7 +120,7 @@ export default async function DetailsPage({
 
   return (
     <article>
-      <section className="relative -mt-16 h-[60vh] min-h-[440px]">
+      <section className="relative -mt-[var(--nav-h)] h-[46vh] min-h-[320px] sm:h-[62vh] sm:min-h-[460px]">
         {backdrop && (
           <Image
             src={backdrop}
@@ -131,14 +131,15 @@ export default async function DetailsPage({
             className="object-cover"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/55 via-45% to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/15 via-45% to-transparent" />
       </section>
 
-      <div className="px-4 sm:px-6 lg:px-10 -mt-32 relative z-10">
+      <div className="px-4 sm:px-6 lg:px-10 -mt-24 sm:-mt-32 relative z-10">
         <div className="mx-auto max-w-screen-2xl flex flex-col md:flex-row gap-8">
           {poster && (
             <div className="shrink-0 w-40 sm:w-52 md:w-64">
-              <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
+              <div className="relative aspect-[2/3] rounded-[var(--radius-tile)] overflow-hidden border border-white/[0.09] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.95)]">
                 <Image
                   src={poster}
                   alt={title}
@@ -150,18 +151,21 @@ export default async function DetailsPage({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[-0.03em] leading-[1.04]">
               {title}
             </h1>
             {media.tagline && (
-              <p className="mt-2 italic text-[var(--color-muted)]">
+              <p className="mt-2.5 text-[var(--color-muted)]">
                 {media.tagline}
               </p>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
               <span className="inline-flex items-center gap-1.5">
-                <Star className="size-4 text-yellow-400 fill-yellow-400" />
-                {(media.rating ?? 0).toFixed(1)}
+                <Star className="size-4 fill-current" />
+                <span className="font-semibold tabular-nums">
+                  {(media.rating ?? 0).toFixed(1)}
+                  <span className="text-white/55 font-normal">/10</span>
+                </span>
               </span>
               {year && (
                 <span className="inline-flex items-center gap-1.5">
@@ -179,7 +183,7 @@ export default async function DetailsPage({
                 {media.genres.map((g) => (
                   <span
                     key={g.id}
-                    className="px-2 py-0.5 rounded-full text-xs bg-white/10"
+                    className="px-2.5 py-0.5 rounded-full text-xs bg-white/10 border border-white/[0.08]"
                   >
                     {g.name}
                   </span>
@@ -190,12 +194,9 @@ export default async function DetailsPage({
               {media.overview}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link
-                href={media.watchHref}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black font-medium hover:bg-white/90 transition"
-              >
+              <Link href={media.watchHref} className="btn-primary px-7 py-3 text-base">
                 <Play className="size-4 fill-black" />
-                Watch now
+                Play
               </Link>
               <FavoriteButton
                 tmdbId={media.id}
@@ -210,13 +211,13 @@ export default async function DetailsPage({
 
             {media.cast.length > 0 && (
               <div className="mt-10">
-                <h2 className="text-lg font-semibold mb-3">Top Cast</h2>
+                <h2 className="section-title mb-3">Top Cast</h2>
                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
                   {media.cast.map((c) => {
                     const profile = c.profileUrl;
                     return (
                       <div key={c.id} className="shrink-0 w-28 text-center">
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-white/5">
+                        <div className="relative aspect-[2/3] rounded-[var(--radius-tile)] overflow-hidden bg-[var(--color-bg-2)] border border-white/[0.07]">
                           {profile ? (
                             <Image
                               src={profile}
@@ -248,7 +249,7 @@ export default async function DetailsPage({
 
         {mediaType === "tv" && media.seasons.length > 0 && (
           <div className="mx-auto max-w-screen-2xl mt-12">
-            <h2 className="text-xl font-semibold mb-4">Seasons & Episodes</h2>
+            <h2 className="section-title mb-4">Seasons &amp; Episodes</h2>
             {/* Season 0 (Specials) is already filtered out by the mapper. */}
             <SeasonPicker tvId={media.id} seasons={details.seasons ?? []} />
           </div>

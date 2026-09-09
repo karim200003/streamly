@@ -174,7 +174,7 @@ export default function Player({
             "relative w-full bg-black overflow-hidden",
             theater
               ? "flex-1 rounded-none border-0"
-              : "aspect-video rounded-xl border border-white/10 shadow-2xl shadow-black/50",
+              : "aspect-video rounded-[var(--radius-sheet)] border border-white/[0.09] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)]",
           )}
         >
           {current && (
@@ -234,7 +234,7 @@ export default function Player({
                     {s.name}
                     {i === active && s.supportsProgress && (
                       <span
-                        className="ml-1.5 inline-block size-1 rounded-full bg-emerald-400"
+                        className="ml-1.5 inline-block size-1 rounded-full bg-black/45"
                         title="Resume support"
                       />
                     )}

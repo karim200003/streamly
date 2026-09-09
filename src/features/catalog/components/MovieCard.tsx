@@ -50,12 +50,6 @@ async function getTrailerKey(
   return result;
 }
 
-function ratingTone(score: number) {
-  if (score >= 7.5) return "text-emerald-300";
-  if (score >= 6) return "text-yellow-300";
-  return "text-orange-300";
-}
-
 export default function MovieCard({ media, priority }: MovieCardProps) {
   // All derivation now happens once in the mapper — this component
   // reads resolved fields instead of re-deriving title/year/type from
@@ -181,10 +175,9 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
           {score > 0 && (
             <span
               className={cn(
-                "absolute top-2 left-2 chip",
+                "absolute top-2 left-2 chip text-white",
                 "transition-all duration-300",
                 "group-hover:opacity-0 group-hover:-translate-y-1",
-                ratingTone(score),
               )}
             >
               <Star className="size-3 fill-current" />
@@ -215,7 +208,7 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 via-40% to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="absolute inset-x-0 bottom-0 p-3 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
             <div className="flex items-center gap-1.5 text-[11px] text-white/80 font-medium">
-              <span className={ratingTone(score)}>
+              <span>
                 <Star className="inline size-3 fill-current -mt-0.5 mr-0.5" />
                 {score.toFixed(1)}
               </span>

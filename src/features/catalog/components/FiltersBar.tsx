@@ -48,7 +48,7 @@ export default function FiltersBar({ mediaType }: Props) {
   };
 
   const selectClass =
-    "px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 hover:bg-white/10 transition disabled:opacity-50";
+    "px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 hover:bg-white/10 transition disabled:opacity-50";
 
   return (
     <div

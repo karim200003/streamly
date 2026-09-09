@@ -14,7 +14,7 @@ export default function LegalPage() {
     <div className="px-4 sm:px-6 lg:px-10 py-10">
       <div className="mx-auto max-w-3xl">
         <header className="mb-8 flex items-center gap-3">
-          <Shield className="size-6 text-[var(--color-accent)]" />
+          <Shield className="size-6 text-white/70" />
           <h1 className="text-3xl font-bold tracking-tight">
             Disclaimer &amp; Legal
           </h1>
@@ -22,7 +22,7 @@ export default function LegalPage() {
 
         <article className="space-y-8 text-white/85 leading-relaxed">
           <section>
-            <div className="flex items-center gap-2 text-[var(--color-accent)] text-sm font-medium uppercase tracking-wide mb-2">
+            <div className="flex items-center gap-2 text-white/70 text-sm font-medium uppercase tracking-wide mb-2">
               <Info className="size-4" /> Overview
             </div>
             <p>
@@ -139,7 +139,7 @@ export default function LegalPage() {
           </section>
 
           <section>
-            <div className="flex items-center gap-2 text-[var(--color-accent)] text-sm font-medium uppercase tracking-wide mb-2">
+            <div className="flex items-center gap-2 text-white/70 text-sm font-medium uppercase tracking-wide mb-2">
               <Mail className="size-4" /> Contact
             </div>
             <p>

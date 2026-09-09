@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Heart } from "lucide-react";
+import { Check, Heart, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,13 @@ interface Props {
   mediaType: MediaType;
   title: string;
   posterPath: string | null;
+  /**
+   * "pill" is the labelled button used on the details page. "icon" is
+   * the bare, icon-only control the hero drops into its `.icon-group` —
+   * it renders no wrapper element, because that group styles its direct
+   * children.
+   */
+  variant?: "pill" | "icon";
 }
 
 export default function FavoriteButton({
@@ -24,6 +31,7 @@ export default function FavoriteButton({
   mediaType,
   title,
   posterPath,
+  variant = "pill",
 }: Props) {
   const { status } = useSession();
   const router = useRouter();
@@ -76,6 +84,29 @@ export default function FavoriteButton({
   // lookup so the label can't flash the wrong value.
   const saved = status === "authenticated" && isFav === true;
   const ready = status !== "authenticated" || isFav !== null;
+  const label = saved ? "Remove from My List" : "Add to My List";
+
+  if (variant === "icon") {
+    // No error text and no wrapper: the hero group has no room for a
+    // message, and a failed toggle already rolls the icon back, which is
+    // the feedback that matters here.
+    return (
+      <button
+        onClick={onClick}
+        disabled={pending || !ready}
+        aria-pressed={saved}
+        aria-label={label}
+        title={label}
+        className="disabled:opacity-60"
+      >
+        {saved ? (
+          <Check className="size-[1.15rem]" />
+        ) : (
+          <Plus className="size-[1.3rem]" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <div className="inline-flex flex-col items-start gap-1">
@@ -84,13 +115,11 @@ export default function FavoriteButton({
         disabled={pending || !ready}
         aria-pressed={saved}
         className={cn(
-          "inline-flex items-center gap-2 px-5 py-2.5 rounded-lg transition disabled:opacity-60",
-          saved
-            ? "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90"
-            : "glass hover:bg-white/10",
+          "inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition disabled:opacity-60",
+          saved ? "bg-white text-black hover:bg-white/90" : "glass hover:bg-white/10",
         )}
       >
-        <Heart className={cn("size-4", saved && "fill-white")} />
+        <Heart className={cn("size-4", saved && "fill-black")} />
         {saved ? "In My List" : "Add to List"}
       </button>
       {error && (

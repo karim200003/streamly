@@ -16,9 +16,18 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-display: var(--font-display-serif), "Instrument Serif", "Iowan Old Style", serif;
 
-  /* One radius scale, used everywhere, so tiles/sheets/pills agree. */
+  /* One radius scale, used everywhere, so tiles/sheets/pills agree.
+     `--radius-tile` is the 14px poster corner; provider tiles are
+     squares, so they need a proportionally larger radius to read as
+     the same family. */
   --radius-tile: 0.875rem;
+  --radius-provider: 1.125rem;
   --radius-sheet: 1.25rem;
+
+  /* Height of the floating navbar. Full-bleed surfaces cancel the
+     matching top padding in layout.tsx with a negative margin, so the
+     two have to agree — hence one token rather than two literals. */
+  --nav-h: 4.5rem;
 }
 
 :root {
@@ -56,6 +65,34 @@ body {
 @media (min-width: 640px) {
   .section-title {
     font-size: 1.1875rem;
+  }
+}
+
+/* Page heading — one definition for every non-home surface (Movies,
+   Shows, Search, My List, History, Settings) so they read as one site.
+   The serif italic that used to sit here fought the sans section
+   headings directly beneath it. */
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  color: var(--color-fg);
+}
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 2.125rem;
+  }
+}
+
+/* Generous, consistent vertical rhythm between major page sections. */
+.section-gap {
+  padding-top: 1.75rem;
+  padding-bottom: 1.75rem;
+}
+@media (min-width: 768px) {
+  .section-gap {
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
   }
 }
 
@@ -190,6 +227,71 @@ body {
 }
 .btn-glass:active {
   transform: scale(0.97);
+}
+
+/* Circular frosted icon button — nav search/settings, carousel arrows.
+   Icon-only, so every instance needs an accessible name from the
+   markup. */
+.btn-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  color: #fff;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.btn-icon:active {
+  transform: scale(0.94);
+}
+
+/* A compact frosted group of icon-only actions sharing one surface,
+   split by hairline dividers — the secondary half of the hero CTA row.
+   One rounded container rather than separate pills, so it reads as a
+   single control next to the solid Play button. */
+.icon-group {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.icon-group > * {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 2.875rem;
+  color: #fff;
+  transition: background-color 0.18s ease;
+}
+.icon-group > *:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+/* Hairline divider between adjacent actions. `box-shadow` rather than a
+   border so it never adds to the element's box and shift the icons. */
+.icon-group > * + * {
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.16);
+}
+/* The group clips its children, so the shared focus ring (an outline)
+   would be cropped. Draw it inside instead. */
+.icon-group > *:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+.icon-group > * + *:focus-visible {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
 /* Small frosted pill — score chips, badges. */

@@ -19,7 +19,7 @@ export default async function FavoritesPage() {
         </p>
         <Link
           href="/sign-in?callbackUrl=/favorites"
-          className="inline-block mt-5 px-5 py-2.5 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90"
+          className="btn-primary mt-5"
         >
           Sign in
         </Link>
@@ -34,10 +34,8 @@ export default async function FavoritesPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
-      <h1 className="font-display italic text-4xl sm:text-5xl tracking-tight text-white">
-        My List
-      </h1>
-      <p className="text-[var(--color-muted)] mt-1">
+      <h1 className="page-title">My List</h1>
+      <p className="text-[var(--color-muted)] mt-1 text-sm">
         {favorites.length} {favorites.length === 1 ? "title" : "titles"} saved.
       </p>
       {favorites.length === 0 ? (
@@ -54,7 +52,7 @@ export default async function FavoritesPage() {
                 href={`/${f.mediaType}/${f.tmdbId}`}
                 className="group"
               >
-                <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/5">
+                <div className="relative aspect-[2/3] rounded-[var(--radius-tile)] overflow-hidden bg-[var(--color-bg-2)] border border-white/[0.07] shadow-[0_10px_30px_-14px_rgba(0,0,0,0.9)] transition-[border-color] duration-300 group-hover:border-white/20">
                   {poster ? (
                     <Image
                       src={poster}
@@ -69,10 +67,10 @@ export default async function FavoritesPage() {
                     </div>
                   )}
                 </div>
-                <div className="mt-2 text-sm font-medium line-clamp-1">
+                <div className="mt-2.5 text-[0.8125rem] font-medium line-clamp-1 text-white/90">
                   {f.title}
                 </div>
-                <div className="text-xs text-[var(--color-muted)]">
+                <div className="text-[0.6875rem] text-[var(--color-muted)] mt-0.5">
                   {f.mediaType === "movie" ? "Movie" : "TV"}
                 </div>
               </Link>

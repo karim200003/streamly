@@ -29,6 +29,12 @@ export interface MediaSummary {
   /** Ready to hand to next/image; null when TMDB has no artwork. */
   posterUrl: string | null;
   backdropUrl: string | null;
+  /**
+   * The raw TMDB path behind `posterUrl`. Favourites persist this rather
+   * than the built URL, so that a change of image CDN or size doesn't
+   * strand every saved row on a stale absolute URL.
+   */
+  posterPath: string | null;
   /** Four-digit year, or null when TMDB has no date. */
   year: string | null;
   /** 0-10. Null when TMDB reports no votes, rather than a misleading 0. */
@@ -58,6 +64,7 @@ export function mapMediaSummary(
     title: getTitle(raw),
     overview: raw.overview ?? "",
     posterUrl: imageUrl(raw.poster_path, "w500"),
+    posterPath: raw.poster_path ?? null,
     backdropUrl: imageUrl(raw.backdrop_path, "w1280"),
     year: getReleaseYear(raw) || null,
     rating,

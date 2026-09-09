@@ -48,11 +48,9 @@ export default async function BrowsePage({
 
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
-      <header className="mb-6">
-        <h1 className="font-display italic text-4xl sm:text-5xl tracking-tight text-white">
-          {heading}
-        </h1>
-        <p className="text-[var(--color-muted)] mt-1">
+      <header className="mb-7">
+        <h1 className="page-title">{heading}</h1>
+        <p className="text-[var(--color-muted)] mt-1 text-sm">
           Browse by genre, year, and rating.
         </p>
       </header>

@@ -3,12 +3,14 @@ import {
   getPopularMovies,
   getPopularTv,
   getTopRatedMovies,
+  getProviderLogos,
   type TmdbMedia,
 } from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
 import { mapMediaSummaries } from "@/features/catalog/domain";
 import HeroBanner from "@/features/catalog/components/HeroBanner";
 import Carousel from "@/features/catalog/components/Carousel";
+import ProviderRow from "@/features/catalog/components/ProviderRow";
 import MissingApiNotice from "@/features/catalog/components/MissingApiNotice";
 import ContinueWatching from "@/features/history/components/ContinueWatching";
 import ContinueWatchingSkeleton from "@/features/history/components/ContinueWatchingSkeleton";
@@ -60,13 +62,16 @@ async function rail(
 }
 
 export default async function HomePage() {
-  const [adminHero, popularMovies, popularTv, topRated, trending] =
+  const [adminHero, popularMovies, popularTv, topRated, trending, providers] =
     await Promise.all([
       pickAdminHero(),
       rail(getPopularMovies, "popular movies"),
       rail(getPopularTv, "popular tv"),
       rail(getTopRatedMovies, "top rated"),
       rail(() => getTrending("week"), "trending"),
+      // Already degrades to logo-less tiles internally, so it needs no
+      // `rail()` wrapper.
+      getProviderLogos(),
     ]);
 
   // The hero needs a backdrop, so titles without one are skipped rather
@@ -82,6 +87,7 @@ export default async function HomePage() {
     <>
       {heroItems.length > 0 && <HeroBanner items={heroItems} />}
       <MissingApiNotice />
+      <ProviderRow providers={providers} />
       <Suspense fallback={<ContinueWatchingSkeleton />}>
         <ContinueWatching />
       </Suspense>

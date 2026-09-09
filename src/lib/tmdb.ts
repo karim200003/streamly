@@ -7,6 +7,13 @@
 // existing server-component imports.
 
 import { getServerLang } from "./locale-server";
+import { logger } from "./logger";
+import { imageUrl as buildImageUrl } from "./tmdb-shared";
+import {
+  WATCH_PROVIDERS,
+  WATCH_REGION,
+  type ResolvedProvider,
+} from "./providers";
 import type {
   MediaType,
   TmdbMedia,
@@ -33,6 +40,8 @@ export {
   TV_GENRES,
   getGenreName,
 } from "./tmdb-shared";
+
+const log = logger("tmdb");
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
@@ -186,6 +195,8 @@ export interface DiscoverOptions {
   minRating?: number;
   sortBy?: string;
   page?: number;
+  /** TMDB `provider_id` — powers the "Browse by Provider" tiles. */
+  providerId?: number;
 }
 
 export async function discover(
@@ -198,6 +209,13 @@ export async function discover(
     "vote_count.gte": 50,
   };
   if (opts.genreId) params.with_genres = opts.genreId;
+  // TMDB ignores `with_watch_providers` unless a region accompanies it,
+  // and silently returns the unfiltered catalogue — which looks like the
+  // filter working on a popular provider and is easy to miss.
+  if (opts.providerId) {
+    params.with_watch_providers = opts.providerId;
+    params.watch_region = WATCH_REGION;
+  }
   if (opts.minRating) params["vote_average.gte"] = opts.minRating;
   if (opts.year) {
     if (type === "movie") params.primary_release_year = opts.year;
@@ -282,6 +300,40 @@ export async function searchPool(query: string): Promise<TmdbMedia[]> {
     out.push(result);
   }
   return out;
+}
+
+/**
+ * Resolve each curated provider to the logo TMDB currently serves.
+ *
+ * The logo paths are content-hashed and change without notice, so they
+ * are fetched rather than hardcoded. Cached for a day — the list is
+ * effectively static, and this runs on every home render.
+ *
+ * Degrades to `logoUrl: null` (the tile falls back to a wordmark) on
+ * any failure: a provider row is not worth failing the page over.
+ */
+export async function getProviderLogos(): Promise<ResolvedProvider[]> {
+  const withoutLogos = () =>
+    WATCH_PROVIDERS.map((p) => ({ ...p, logoUrl: null }));
+
+  if (!HAS_KEY) return withoutLogos();
+
+  try {
+    const data = await tmdb<{
+      results: { provider_id: number; logo_path: string | null }[];
+    }>("/watch/providers/movie", { watch_region: WATCH_REGION }, 60 * 60 * 24);
+
+    const byId = new Map(
+      data.results.map((r) => [r.provider_id, r.logo_path] as const),
+    );
+    return WATCH_PROVIDERS.map((p) => ({
+      ...p,
+      logoUrl: buildImageUrl(byId.get(p.id) ?? null, "original"),
+    }));
+  } catch (err) {
+    log.warn("watch provider logos unavailable", { err: String(err) });
+    return withoutLogos();
+  }
 }
 
 const PLACEHOLDER_BACKDROP = null;

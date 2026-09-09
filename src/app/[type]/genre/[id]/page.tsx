@@ -77,7 +77,7 @@ export default async function GenrePage({ params, searchParams }: PageProps) {
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
       <header className="mb-6">
-        <p className="text-sm text-[var(--color-accent)] uppercase tracking-wide font-medium">
+        <p className="text-sm text-[var(--color-muted)] uppercase tracking-wide font-medium">
           {label}
         </p>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-1">
