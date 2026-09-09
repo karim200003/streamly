@@ -1,70 +1,22 @@
 import type { Metadata } from "next";
-import { discover } from "@/lib/tmdb";
-import MovieCard from "@/components/MovieCard";
-import FiltersBar from "@/components/FiltersBar";
-import GenreChips from "@/components/GenreChips";
-import Pager from "@/components/Pager";
-import MissingApiNotice from "@/components/MissingApiNotice";
+import BrowsePage, { type BrowseSearchParams } from "@/features/catalog/components/BrowsePage";
 
-export const revalidate = 1800;
+// NOTE: no `export const revalidate` here — this route renders
+// dynamically (searchParams + the `lang` cookie read inside every TMDB
+// helper), so a page-level revalidate is inert. Caching happens at the
+// fetch layer in `tmdb()`. See BrowsePage for the shared implementation.
 
 export const metadata: Metadata = {
   title: "Movies",
   description: "Browse popular, top-rated, and trending movies.",
 };
 
-interface PageProps {
-  searchParams: Promise<{
-    sort?: string;
-    year?: string;
-    rating?: string;
-    page?: string;
-  }>;
-}
-
-export default async function MoviesPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
-  const page = Math.max(1, Math.min(500, Number(sp.page ?? "1") || 1));
-
-  const result = await discover("movie", {
-    sortBy: sp.sort,
-    year: sp.year ? Number(sp.year) : undefined,
-    minRating: sp.rating ? Number(sp.rating) : undefined,
-    page,
-  });
-
+export default async function MoviesPage({
+  searchParams,
+}: {
+  searchParams: Promise<BrowseSearchParams>;
+}) {
   return (
-    <div className="px-4 sm:px-6 lg:px-10 py-8">
-      <header className="mb-6">
-        <h1 className="font-display italic text-4xl sm:text-5xl tracking-tight text-white">
-          Movies
-        </h1>
-        <p className="text-[var(--color-muted)] mt-1">
-          Browse by genre, year, and rating.
-        </p>
-      </header>
-
-      <MissingApiNotice />
-
-      <div className="mb-4">
-        <GenreChips mediaType="movie" />
-      </div>
-
-      <FiltersBar mediaType="movie" />
-
-      {result.results.length === 0 ? (
-        <p className="text-[var(--color-muted)]">
-          No titles match these filters.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {result.results.map((m) => (
-            <MovieCard key={m.id} media={m} />
-          ))}
-        </div>
-      )}
-
-      <Pager page={result.page} totalPages={result.total_pages} />
-    </div>
+    <BrowsePage mediaType="movie" heading="Movies" searchParams={searchParams} />
   );
 }

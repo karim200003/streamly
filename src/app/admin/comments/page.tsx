@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import AdminCommentRow from "@/components/admin/AdminCommentRow";
+import AdminCommentRow from "@/features/admin/components/AdminCommentRow";
 
 export const dynamic = "force-dynamic";
 

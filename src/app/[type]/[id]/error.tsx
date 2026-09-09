@@ -12,6 +12,8 @@ export default function DetailError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // console, not lib/logger: this is a Client Component and the
+    // logger is server-only. Next also reports the digest server-side.
     console.error(error);
   }, [error]);
 

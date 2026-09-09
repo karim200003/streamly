@@ -11,6 +11,23 @@ const IMG_CACHE = `streamly-img-${VERSION}`;
 
 const CORE = ["/", "/offline"];
 
+// Routes whose HTML is user-scoped and must never enter any cache.
+const PRIVATE_PREFIXES = ["/admin", "/favorites", "/history", "/sign-in"];
+
+// Cap the image cache so a long browsing session can't grow it without
+// bound — every poster ever viewed would otherwise persist forever.
+const IMG_CACHE_MAX_ENTRIES = 300;
+
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  // Cache Storage preserves insertion order, so the oldest entries sort
+  // first — evict from the front until we're back under the cap.
+  for (const key of keys.slice(0, Math.max(0, keys.length - maxEntries))) {
+    await cache.delete(key);
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((c) => c.addAll(CORE)).catch(() => {}),
@@ -51,10 +68,19 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   // Skip API surface and auth — never cache personal data.
+  //
+  // PRIVATE_PREFIXES covers every route that renders user-scoped data.
+  // These pages are `force-dynamic` server components containing one
+  // account's favorites / history, so caching their HTML would let the
+  // next person on a shared device read the previous user's list from
+  // the offline fallback. Keep in sync with the pages that call
+  // `auth()` / export `dynamic = "force-dynamic"`.
   if (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/_next/data/") ||
-    url.pathname.startsWith("/admin")
+    PRIVATE_PREFIXES.some(
+      (p) => url.pathname === p || url.pathname.startsWith(`${p}/`),
+    )
   ) {
     return;
   }
@@ -75,7 +101,12 @@ self.addEventListener("fetch", (event) => {
         const cached = await cache.match(req);
         const fetchPromise = fetch(req)
           .then((res) => {
-            if (res.ok) cache.put(req, res.clone());
+            if (res.ok) {
+              cache
+                .put(req, res.clone())
+                .then(() => trimCache(IMG_CACHE, IMG_CACHE_MAX_ENTRIES))
+                .catch(() => {});
+            }
             return res;
           })
           .catch(() => cached);

@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 import { adminWriteLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
+
+const log = logger("admin");
 
 export async function requireAdmin() {
   const session = await auth();
@@ -61,7 +64,7 @@ export async function idempotentDelete(
   } catch (err) {
     const code = (err as { code?: string }).code;
     if (code === "P2025") return null;
-    console.error(`[admin] ${context} failed:`, err);
+    log.error(`${context} failed`, err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

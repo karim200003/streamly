@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { logger } from "./logger";
 
 // If Upstash creds are present we use distributed Redis-backed limiting
 // (safe across serverless/multi-pod). Otherwise we fall back to an
@@ -20,11 +21,27 @@ interface Limiter {
   }>;
 }
 
+/**
+ * Evict expired buckets once the map grows past this. Without it the map
+ * only ever overwrote entries whose key came back after expiry — keys
+ * that never returned (the common case for IP-keyed limits under scan
+ * traffic) accumulated for the lifetime of the process.
+ */
+const IN_MEMORY_SWEEP_THRESHOLD = 5_000;
+
 function inMemoryLimiter(maxRequests: number, windowMs: number): Limiter {
   const buckets = new Map<string, { count: number; resetAt: number }>();
+
+  const sweep = (now: number) => {
+    for (const [k, v] of buckets) {
+      if (v.resetAt < now) buckets.delete(k);
+    }
+  };
+
   return {
     async limit(key: string) {
       const now = Date.now();
+      if (buckets.size > IN_MEMORY_SWEEP_THRESHOLD) sweep(now);
       const b = buckets.get(key);
       if (!b || b.resetAt < now) {
         buckets.set(key, { count: 1, resetAt: now + windowMs });
@@ -47,9 +64,17 @@ function inMemoryLimiter(maxRequests: number, windowMs: number): Limiter {
   };
 }
 
+// One client shared by every limiter. `Redis.fromEnv()` was previously
+// called once per limiter, creating eight clients for the same endpoint.
+let sharedRedis: Redis | null = null;
+function getRedis(): Redis {
+  sharedRedis ??= Redis.fromEnv();
+  return sharedRedis;
+}
+
 function build(maxRequests: number, windowSeconds: number, prefix: string): Limiter {
   if (hasUpstash) {
-    const redis = Redis.fromEnv();
+    const redis = getRedis();
     const rl = new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(maxRequests, `${windowSeconds} s`),
@@ -111,6 +136,21 @@ export function getClientIp(req: Request): string {
   const real = req.headers.get("x-real-ip");
   if (real) return real.trim();
   return "unknown";
+}
+
+/**
+ * Surface the degraded configuration at boot rather than letting a
+ * deploy that forgot the Upstash credentials look healthy while silently
+ * running per-pod limits.
+ */
+export function warnIfRateLimitsAreLocal(): void {
+  if (!hasUpstash && process.env.NODE_ENV === "production") {
+    logger("rate-limit").warn(
+      "UPSTASH_REDIS_REST_URL/TOKEN are unset — falling back to in-process " +
+        "limits. On a multi-instance deploy each instance keeps its own " +
+        "counters, so effective limits are N x configured.",
+    );
+  }
 }
 
 export function rateLimitResponse(reset: number) {

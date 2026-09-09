@@ -37,15 +37,14 @@ export default function LanguagePicker() {
   };
 
   return (
-    <label
-      className="relative inline-flex items-center"
-      aria-label="Display language"
-    >
+    <label className="relative inline-flex items-center">
+      <span className="sr-only">Display language</span>
       <Globe className="size-4 absolute left-2.5 pointer-events-none text-white/60" />
       <select
         value={current}
         onChange={onChange}
         disabled={pending}
+        aria-label="Display language"
         className="pl-8 pr-2 py-1.5 rounded-md text-sm bg-white/5 hover:bg-white/10 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 transition appearance-none cursor-pointer disabled:opacity-50"
       >
         {LANGUAGES.map((l) => (

@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/prisma";
-import UserActions from "@/components/admin/UserActions";
+import UserActions from "@/features/admin/components/UserActions";
 
 export const dynamic = "force-dynamic";
 
+/** Newest N accounts. Pagination lands with the admin rework. */
+const MAX_USERS = 200;
+
 export default async function AdminUsersPage() {
+  // Bounded: this had no `take`, so the admin page full-scanned and
+  // sorted the entire user table on every load.
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
+    take: MAX_USERS,
     select: {
       id: true,
       email: true,

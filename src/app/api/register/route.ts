@@ -12,8 +12,15 @@ export async function POST(req: Request) {
   const rl = await registerLimiter.limit(ip);
   if (!rl.success) return rateLimitResponse(rl.reset);
 
+  // Parsed outside the try: a malformed body is a client error (400),
+  // not the blanket 500 the catch below is meant for.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+
   try {
-    const { email, password, name } = await req.json();
+    const { email, password, name } = body;
     if (typeof email !== "string" || typeof password !== "string") {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }

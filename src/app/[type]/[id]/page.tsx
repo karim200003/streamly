@@ -5,16 +5,21 @@ import Link from "next/link";
 import { Play, Star, Calendar, Clock } from "lucide-react";
 import { getDetails, imageUrl, similarFromDetails, type MediaType } from "@/lib/tmdb";
 import { formatRuntime } from "@/lib/utils";
+import { getComments } from "@/features/comments/queries";
+import {
+  mapMediaDetails,
+  mapMediaSummaries,
+} from "@/features/catalog/domain";
 import dynamic from "next/dynamic";
-import Carousel from "@/components/Carousel";
-import FavoriteButton from "@/components/FavoriteButton";
-import SeasonPicker from "@/components/SeasonPicker";
-import TrailerButton from "@/components/TrailerButton";
+import Carousel from "@/features/catalog/components/Carousel";
+import FavoriteButton from "@/features/favorites/components/FavoriteButton";
+import SeasonPicker from "@/features/watch/components/SeasonPicker";
+import TrailerButton from "@/features/watch/components/TrailerButton";
 
 // Comments are below the fold (after hero, cast, seasons) and pull in
 // useSession + a fetch on mount. Deferring their JS chunk shrinks the
 // initial JS sent on every details page view.
-const Comments = dynamic(() => import("@/components/Comments"), {
+const Comments = dynamic(() => import("@/features/comments/components/Comments"), {
   loading: () => (
     <div className="mt-12 space-y-3">
       <div className="h-7 w-48 rounded skeleton" />
@@ -24,7 +29,18 @@ const Comments = dynamic(() => import("@/components/Comments"), {
   ),
 });
 
-export const revalidate = 3600;
+// NOTE: no `export const revalidate` here.
+//
+// This route renders dynamically, so a page-level revalidate would be
+// inert — the build output lists it under "ƒ (Dynamic)" with a blank
+// Revalidate column. It renders dynamically because `getServerLang()` reads the
+// `lang` cookie inside every TMDB helper.
+//
+// Caching still happens where it matters: `tmdb()` issues its fetches
+// with `next: { revalidate }`, so the upstream responses are shared
+// across requests and TMDB is not re-hit per visitor. Removing the
+// misleading export rather than leaving a no-op that reads like a
+// guarantee.
 
 export async function generateMetadata({
   params,
@@ -76,21 +92,31 @@ export default async function DetailsPage({
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId)) notFound();
 
-  const mediaType = type as MediaType;
-  const details = await getDetails(mediaType, tmdbId);
-  const similar = similarFromDetails(details, mediaType);
-
-  const title = details.title ?? details.name ?? "Untitled";
-  const backdrop = imageUrl(details.backdrop_path, "w1280");
-  const poster = imageUrl(details.poster_path, "w500");
-  const runtime =
-    details.runtime ??
-    (details.episode_run_time && details.episode_run_time[0]) ??
-    null;
-  const year = (details.release_date ?? details.first_air_date ?? "").slice(0, 4);
-  const trailer = details.videos?.results.find(
-    (v) => v.site === "YouTube" && v.type === "Trailer",
+  const mediaType: MediaType = type;
+  // Comments come from our own database and TMDB details from upstream —
+  // independent, so they run concurrently rather than in series.
+  const [details, comments] = await Promise.all([
+    getDetails(mediaType, tmdbId),
+    getComments(tmdbId, mediaType),
+  ]);
+  // One mapper call replaces the title/backdrop/poster/runtime/year/
+  // trailer derivations that were spelled out here — the same
+  // expressions that also appeared in MovieCard, HeroBanner and the
+  // search page.
+  const media = mapMediaDetails(details, mediaType);
+  const similar = mapMediaSummaries(
+    similarFromDetails(details, mediaType),
+    mediaType,
   );
+
+  const {
+    title,
+    backdropUrl: backdrop,
+    posterUrl: poster,
+    runtime,
+    year,
+    trailerKey,
+  } = media;
 
   return (
     <article>
@@ -127,15 +153,15 @@ export default async function DetailsPage({
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
               {title}
             </h1>
-            {details.tagline && (
+            {media.tagline && (
               <p className="mt-2 italic text-[var(--color-muted)]">
-                {details.tagline}
+                {media.tagline}
               </p>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
               <span className="inline-flex items-center gap-1.5">
                 <Star className="size-4 text-yellow-400 fill-yellow-400" />
-                {details.vote_average.toFixed(1)}
+                {(media.rating ?? 0).toFixed(1)}
               </span>
               {year && (
                 <span className="inline-flex items-center gap-1.5">
@@ -150,7 +176,7 @@ export default async function DetailsPage({
                 </span>
               )}
               <div className="flex flex-wrap gap-1.5">
-                {details.genres.map((g) => (
+                {media.genres.map((g) => (
                   <span
                     key={g.id}
                     className="px-2 py-0.5 rounded-full text-xs bg-white/10"
@@ -161,36 +187,33 @@ export default async function DetailsPage({
               </div>
             </div>
             <p className="mt-5 text-base text-white/85 max-w-3xl leading-relaxed">
-              {details.overview}
+              {media.overview}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
-                href={`/watch/${mediaType}/${details.id}`}
+                href={media.watchHref}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black font-medium hover:bg-white/90 transition"
               >
                 <Play className="size-4 fill-black" />
                 Watch now
               </Link>
               <FavoriteButton
-                tmdbId={details.id}
+                tmdbId={media.id}
                 mediaType={mediaType}
                 title={title}
                 posterPath={details.poster_path}
               />
-              {trailer && (
-                <TrailerButton
-                  youtubeKey={trailer.key}
-                  label="Watch trailer"
-                />
+              {trailerKey && (
+                <TrailerButton youtubeKey={trailerKey} label="Watch trailer" />
               )}
             </div>
 
-            {details.credits?.cast && details.credits.cast.length > 0 && (
+            {media.cast.length > 0 && (
               <div className="mt-10">
                 <h2 className="text-lg font-semibold mb-3">Top Cast</h2>
                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                  {details.credits.cast.slice(0, 12).map((c) => {
-                    const profile = imageUrl(c.profile_path, "w200");
+                  {media.cast.map((c) => {
+                    const profile = c.profileUrl;
                     return (
                       <div key={c.id} className="shrink-0 w-28 text-center">
                         <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-white/5">
@@ -223,18 +246,20 @@ export default async function DetailsPage({
           </div>
         </div>
 
-        {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (
+        {mediaType === "tv" && media.seasons.length > 0 && (
           <div className="mx-auto max-w-screen-2xl mt-12">
             <h2 className="text-xl font-semibold mb-4">Seasons & Episodes</h2>
-            <SeasonPicker
-              tvId={details.id}
-              seasons={details.seasons.filter((s) => s.season_number > 0)}
-            />
+            {/* Season 0 (Specials) is already filtered out by the mapper. */}
+            <SeasonPicker tvId={media.id} seasons={details.seasons ?? []} />
           </div>
         )}
 
         <div className="mx-auto max-w-screen-2xl">
-          <Comments tmdbId={details.id} mediaType={mediaType} />
+          <Comments
+            tmdbId={media.id}
+            mediaType={mediaType}
+            initialComments={comments}
+          />
         </div>
       </div>
 

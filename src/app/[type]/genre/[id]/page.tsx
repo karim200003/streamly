@@ -1,16 +1,31 @@
 import type { Metadata } from "next";
+import MediaGrid from "@/components/ui/MediaGrid";
 import { notFound } from "next/navigation";
 import {
   discover,
   getGenreName,
   type MediaType,
 } from "@/lib/tmdb";
-import MovieCard from "@/components/MovieCard";
-import FiltersBar from "@/components/FiltersBar";
-import Pager from "@/components/Pager";
-import MissingApiNotice from "@/components/MissingApiNotice";
+import { mapMediaSummaries } from "@/features/catalog/domain";
+import { parseSort, parseYear, parseRating } from "@/lib/discover-sort";
+import MovieCard from "@/features/catalog/components/MovieCard";
+import FiltersBar from "@/features/catalog/components/FiltersBar";
+import Pager from "@/features/catalog/components/Pager";
+import MissingApiNotice from "@/features/catalog/components/MissingApiNotice";
 
-export const revalidate = 1800;
+// NOTE: no `export const revalidate` here.
+//
+// This route renders dynamically, so a page-level revalidate would be
+// inert — the build output lists it under "ƒ (Dynamic)" with a blank
+// Revalidate column. Two things force that: the `?sort=/year=/rating=`
+// searchParams read below, and `getServerLang()` reading the `lang`
+// cookie inside every TMDB helper.
+//
+// Caching still happens where it matters: `tmdb()` issues its fetches
+// with `next: { revalidate }`, so the upstream responses are shared
+// across requests and TMDB is not re-hit per visitor. Removing the
+// misleading export rather than leaving a no-op that reads like a
+// guarantee.
 
 interface PageProps {
   params: Promise<{ type: string; id: string }>;
@@ -44,16 +59,16 @@ export default async function GenrePage({ params, searchParams }: PageProps) {
   const genreId = Number(id);
   if (!Number.isFinite(genreId)) notFound();
 
-  const mediaType = type as MediaType;
+  const mediaType: MediaType = type;
   const genreName = getGenreName(mediaType, genreId);
   if (!genreName) notFound();
 
   const page = Math.max(1, Math.min(500, Number(sp.page ?? "1") || 1));
   const result = await discover(mediaType, {
     genreId,
-    sortBy: sp.sort,
-    year: sp.year ? Number(sp.year) : undefined,
-    minRating: sp.rating ? Number(sp.rating) : undefined,
+    sortBy: parseSort(mediaType, sp.sort),
+    year: parseYear(sp.year),
+    minRating: parseRating(sp.rating),
     page,
   });
 
@@ -81,11 +96,15 @@ export default async function GenrePage({ params, searchParams }: PageProps) {
           No titles match these filters.
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {result.results.map((m) => (
-            <MovieCard key={`${m.id}-${m.media_type}`} media={m} />
+        <MediaGrid>
+          {mapMediaSummaries(result.results, mediaType).map((m, i) => (
+            <MovieCard
+              key={`${m.mediaType}-${m.id}`}
+              media={m}
+              priority={i < 6}
+            />
           ))}
-        </div>
+        </MediaGrid>
       )}
 
       <Pager page={result.page} totalPages={result.total_pages} />

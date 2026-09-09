@@ -4,14 +4,18 @@ import type { MediaType } from "./tmdb-shared";
  * Streaming provider registry.
  *
  * URL specs and parameters for each provider were taken from their
- * official docs / live player bundles (verified 2026-05-09):
+ * official docs / live player bundles (verified 2026-09-09):
  *
- *   Videasy   — https://www.videasy.net/docs   (player.videasy.net)
+ *   Videasy   — https://www.videasy.net/docs   (player.videasy.to)
  *   VidKing   — https://vidking.net/docs       (www.vidking.net/embed/...)
- *   VidFast   — https://vidfast.pro/           (vidfast.pro/movie|tv)
- *   111Movies — https://111movies.com/         (embed host: 111movies.net)
- *   VidZee    — https://vidzee.wtf/docs        (player.vidzee.wtf)
- *   MoviesAPI — https://moviesapi.club/        (TV path uses DASHES: id-s-e)
+ *   VidFast   — https://vidfast.pro/           (vidfast.vc/movie|tv)
+ *   VidZee    — https://vidzee.wtf/docs        (player.vidzee.wtf/embed/...)
+ *
+ * NOTE: several providers 301 to a new TLD. A cross-origin redirect is
+ * re-checked against `frame-src`, so the REDIRECT TARGET must be in the
+ * CSP or the browser blocks the frame — a `curl -L` health check passes
+ * while the embed is dead in-app. Build URLs on the post-redirect host
+ * and keep the legacy origin allowed in case they flip back.
  *
  * Order is the source-button order in the UI. Videasy stays default.
  */
@@ -91,7 +95,7 @@ const PROVIDERS: Provider[] = [
       if (opts.startTime && opts.startTime > 0) {
         params.progress = Math.floor(opts.startTime);
       }
-      return `https://player.videasy.net${path}${qs(params)}`;
+      return `https://player.videasy.to${path}${qs(params)}`;
     },
   },
 
@@ -140,38 +144,24 @@ const PROVIDERS: Provider[] = [
         params.autoNext = true;
         params.nextButton = true;
       }
-      return `https://vidfast.pro${path}${qs(params)}`;
-    },
-  },
-
-  {
-    // Minimal, polished player. Embed host is 111movies.NET (the
-    // .com domain is the marketing/docs site only). Supports both
-    // TMDB and IMDB IDs in the same path slot. No documented
-    // query parameters.
-    id: "111movies",
-    name: "111Movies",
-    build: (type, id, s, e) => {
-      const path =
-        type === "movie"
-          ? `/movie/${id}`
-          : `/tv/${id}/${s}/${e}`;
-      return `https://111movies.net${path}`;
+      return `https://vidfast.vc${path}${qs(params)}`;
     },
   },
 
   {
     // Lightweight player; explicitly sets `frame-ancestors *` so it
-    // never blocks our iframe. v2 is the newer player, falls back
-    // to v1 if v2 is missing the title (handled per-source by users
-    // clicking the next button).
+    // never blocks our iframe. It also sends `X-Frame-Options:
+    // SAMEORIGIN`, but CSP Level 2 says frame-ancestors overrides XFO
+    // and every current browser honours that, so the embed still loads.
+    // NOTE: the `/v2/embed/...` prefix was retired upstream and now
+    // 404s — the live path is plain `/embed/...`.
     id: "vidzee",
     name: "VidZee",
     build: (type, id, s, e, opts) => {
       const path =
         type === "movie"
-          ? `/v2/embed/movie/${id}`
-          : `/v2/embed/tv/${id}/${s}/${e}`;
+          ? `/embed/movie/${id}`
+          : `/embed/tv/${id}/${s}/${e}`;
       const params: Record<string, string | number | boolean | undefined> = {
         autoplay: true,
         lang: opts.dsLang,
@@ -179,36 +169,18 @@ const PROVIDERS: Provider[] = [
       return `https://player.vidzee.wtf${path}${qs(params)}`;
     },
   },
-
-  {
-    // Older but reliable. NOTE: TV path uses dash-separated id-s-e,
-    // NOT slashes (the slash form 404s on their backend). The
-    // ".club" host 301-redirects to ".to" — we go straight to .to
-    // to avoid the redirect roundtrip.
-    id: "moviesapi",
-    name: "MoviesAPI",
-    build: (type, id, s, e) => {
-      const path =
-        type === "movie"
-          ? `/movie/${id}`
-          : `/tv/${id}-${s}-${e}`;
-      return `https://moviesapi.club${path}`;
-    },
-  },
 ];
-
-export const DEFAULT_PROVIDER_ID = "videasy";
 
 // Hosts that need to appear in `frame-src` of the CSP. Exported so
 // next.config.ts can build its CSP from a single source of truth.
 export const PROVIDER_FRAME_HOSTS = [
+  // Current build hosts, plus the legacy origins they redirect from.
+  "https://player.videasy.to",
   "https://player.videasy.net",
   "https://www.vidking.net",
+  "https://vidfast.vc",
   "https://vidfast.pro",
-  "https://111movies.net",
   "https://player.vidzee.wtf",
-  "https://moviesapi.club",
-  "https://moviesapi.to",
 ] as const;
 
 export function getServers(
