@@ -23,7 +23,7 @@ export default async function HistoryPage() {
         </p>
         <Link
           href="/sign-in?callbackUrl=/history"
-          className="inline-block mt-5 px-5 py-2.5 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90"
+          className="btn-primary mt-5"
         >
           Sign in
         </Link>
@@ -41,10 +41,8 @@ export default async function HistoryPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
-      <h1 className="font-display italic text-4xl sm:text-5xl tracking-tight text-white">
-        Watch History
-      </h1>
-      <p className="text-[var(--color-muted)] mt-1">
+      <h1 className="page-title">Watch History</h1>
+      <p className="text-[var(--color-muted)] mt-1 text-sm">
         {items.length} {items.length === 1 ? "item" : "items"}
       </p>
       {items.length === 0 ? (
@@ -63,7 +61,7 @@ export default async function HistoryPage() {
               >
                 <Link
                   href={detailsHref}
-                  className="relative shrink-0 w-16 aspect-[2/3] rounded-lg overflow-hidden bg-white/5"
+                  className="relative shrink-0 w-16 aspect-[2/3] rounded-[var(--radius-tile)] overflow-hidden bg-[var(--color-bg-2)] border border-white/[0.07]"
                 >
                   {poster && (
                     <Image
@@ -89,7 +87,7 @@ export default async function HistoryPage() {
                 </div>
                 <Link
                   href={watchHref(it)}
-                  className="px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-sm transition"
+                  className="px-4 py-1.5 rounded-full glass hover:bg-white/15 text-sm font-medium transition"
                 >
                   Resume
                 </Link>

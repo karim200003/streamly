@@ -44,10 +44,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
       <div className="mx-auto max-w-screen-2xl">
-        <h1 className="font-display italic text-4xl sm:text-5xl tracking-tight text-white">
-          Search
-        </h1>
-        <p className="text-[var(--color-muted)] mt-1">
+        <h1 className="page-title">Search</h1>
+        <p className="text-[var(--color-muted)] mt-1 text-sm">
           Find movies and shows by title, then filter by genre, year, and rating.
         </p>
 
@@ -85,8 +83,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
           ) : (
             trendingItems.length > 0 && (
               <div>
-                <h2 className="inline-flex items-center gap-2 text-sm font-medium text-white/80 uppercase tracking-wide mb-4">
-                  <TrendingUp className="size-4 text-[var(--color-accent)]" />
+                <h2 className="section-title inline-flex items-center gap-2 mb-4">
+                  <TrendingUp className="size-[1.05rem] text-white/60" />
                   Trending today
                 </h2>
                 <MediaGrid>

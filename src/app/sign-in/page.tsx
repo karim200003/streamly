@@ -105,7 +105,7 @@ function SignInForm() {
           )}
           <button
             disabled={busy}
-            className="w-full py-2.5 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 font-medium transition disabled:opacity-50"
+            className="btn-primary w-full py-2.5 disabled:opacity-50"
           >
             {busy
               ? "Please wait…"

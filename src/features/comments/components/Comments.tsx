@@ -82,7 +82,7 @@ export default function Comments({
   return (
     <section className="mt-12">
       <header className="flex items-center gap-2 mb-4">
-        <MessageSquare className="size-5 text-[var(--color-accent)]" />
+        <MessageSquare className="size-5 text-white/60" />
         <h2 className="text-xl font-semibold tracking-tight">
           Comments &amp; Reviews
         </h2>
@@ -121,7 +121,7 @@ export default function Comments({
                         className={cn(
                           "size-4 transition",
                           active
-                            ? "fill-yellow-400 text-yellow-400"
+                            ? "fill-white text-white"
                             : "text-white/30 hover:text-white/60",
                         )}
                       />
@@ -130,13 +130,13 @@ export default function Comments({
                 })}
               </div>
               {rating && (
-                <span className="text-yellow-400">{rating}/10</span>
+                <span className="text-white">{rating}/10</span>
               )}
             </div>
             <button
               type="submit"
               disabled={pending || body.trim().length === 0}
-              className="px-4 py-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-sm font-medium disabled:opacity-50"
+              className="btn-primary px-5 py-1.5 text-sm disabled:opacity-50"
             >
               {pending ? "Posting…" : "Post"}
             </button>
@@ -186,7 +186,7 @@ export default function Comments({
                         {c.user.name}
                       </span>
                       {c.rating != null && (
-                        <span className="inline-flex items-center gap-1 text-xs text-yellow-400">
+                        <span className="inline-flex items-center gap-1 text-xs text-white/90">
                           <Star className="size-3 fill-yellow-400" />
                           {c.rating}/10
                         </span>
@@ -204,7 +204,7 @@ export default function Comments({
                       onClick={() => remove(c.id)}
                       disabled={pending}
                       aria-label="Delete comment"
-                      className="opacity-50 hover:opacity-100 hover:text-[var(--color-accent)] transition p-1"
+                      className="opacity-50 hover:opacity-100 hover:text-white transition p-1"
                     >
                       <Trash2 className="size-4" />
                     </button>

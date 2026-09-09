@@ -8,11 +8,13 @@ import {
   Play,
   Info,
   Star,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Pause,
 } from "lucide-react";
 import type { MediaSummary } from "@/features/catalog/domain";
+import FavoriteButton from "@/features/favorites/components/FavoriteButton";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -80,7 +82,7 @@ export default function HeroBanner({ items }: Props) {
     <section
       aria-roledescription="carousel"
       aria-label="Featured titles"
-      className="relative -mt-[4.5rem] h-[82vh] min-h-[560px] w-full overflow-hidden group select-none"
+      className="relative -mt-[var(--nav-h)] h-[85vh] min-h-[600px] w-full overflow-hidden group select-none"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => {
@@ -133,9 +135,9 @@ export default function HeroBanner({ items }: Props) {
           >
             {/* Badge */}
             <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] uppercase">
-              <span className="text-[var(--color-accent)]">Featured</span>
+              <span className="text-white/85">Featured</span>
               <span className="text-white/20">/</span>
-              <span className="text-white/60">
+              <span className="text-white/55">
                 {type === "movie" ? "Movie" : "Series"}
               </span>
             </div>
@@ -146,23 +148,25 @@ export default function HeroBanner({ items }: Props) {
             </h1>
 
             {/* Meta */}
-            <div className="flex items-center gap-3 text-sm text-white/80">
+            <div className="flex items-center gap-3 text-sm text-white/85">
               <span className="inline-flex items-center gap-1.5">
-                <Star className="size-3.5 text-yellow-400 fill-yellow-400" />
+                <Star className="size-4 fill-current" />
                 <span className="font-semibold tabular-nums">
                   {(media.rating ?? 0).toFixed(1)}
+                  <span className="text-white/55 font-normal">/10</span>
                 </span>
               </span>
               {year && (
                 <>
                   <span className="size-1 rounded-full bg-white/25" />
-                  <span className="tabular-nums">{year}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="size-4" />
+                    <span className="tabular-nums">{year}</span>
+                  </span>
                 </>
               )}
               <span className="size-1 rounded-full bg-white/25" />
-              <span className="uppercase text-xs tracking-widest text-white/50">
-                {type === "movie" ? "Movie" : "Series"}
-              </span>
+              <span>{type === "movie" ? "Movie" : "Series"}</span>
             </div>
 
             {/* Overview */}
@@ -170,19 +174,29 @@ export default function HeroBanner({ items }: Props) {
               {media.overview}
             </p>
 
-            {/* CTAs */}
+            {/* CTAs — one solid primary, then icon-only secondaries
+                sharing a single frosted surface. Text buttons here
+                competed with the title for attention. */}
             <div className="flex items-center gap-3 pt-3">
               <Link
                 href={`/watch/${type}/${media.id}`}
-                className="btn-primary"
+                className="btn-primary px-7 py-3 text-base"
               >
                 <Play className="size-4 fill-black" />
                 Play
               </Link>
-              <Link href={media.href} className="btn-glass">
-                <Info className="size-4" />
-                More info
-              </Link>
+              <div className="icon-group">
+                <FavoriteButton
+                  variant="icon"
+                  tmdbId={media.id}
+                  mediaType={type}
+                  title={title}
+                  posterPath={media.posterPath}
+                />
+                <Link href={media.href} aria-label={`More info about ${title}`}>
+                  <Info className="size-[1.15rem]" />
+                </Link>
+              </div>
             </div>
           </m.div>
         </AnimatePresence>
@@ -205,7 +219,9 @@ export default function HeroBanner({ items }: Props) {
       <button
         onClick={next}
         className={cn(
-          "absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20",
+          // Cleared to the left of the position indicator, which now
+          // owns the hero's right edge.
+          "absolute right-14 sm:right-16 lg:right-20 top-1/2 -translate-y-1/2 z-20",
           "size-11 grid place-items-center rounded-full glass border border-white/10",
           "transition-all duration-300",
           "opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0",
@@ -216,10 +232,42 @@ export default function HeroBanner({ items }: Props) {
         <ChevronRight className="size-5" />
       </button>
 
-      {/* ── Bottom controls ───────────────────────────────────────── */}
-      <div className="absolute bottom-8 right-6 sm:right-10 z-20 flex items-center gap-4">
+      {/* ── Position indicator ────────────────────────────────────── */}
+      {/* Pinned to the hero's right edge and vertically centred, so it
+          reads as a scrollbar for the carousel rather than another
+          element competing with the copy in the bottom-left. */}
+      <div className="absolute right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+        <div className="flex flex-col items-center gap-2">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              aria-label={`Go to slide ${i + 1} of ${items.length}`}
+              aria-current={i === current}
+              className={cn(
+                "relative w-[3px] rounded-full overflow-hidden transition-all duration-300 bg-white/25",
+                i === current ? "h-8" : "h-3 hover:bg-white/50",
+              )}
+            >
+              {/* Completed slides */}
+              {i < current && (
+                <span className="absolute inset-0 bg-white/70 rounded-full" />
+              )}
+              {/* Active slide fills top-to-bottom as its time elapses. */}
+              {i === current && (
+                <span
+                  className="absolute inset-x-0 top-0 bg-white rounded-full"
+                  style={{ height: `${progress}%` }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Pause/resume. Keyboard-reachable, unlike the hover pause —
-            WCAG 2.2.2 requires a way to stop auto-updating content. */}
+            WCAG 2.2.2 requires a way to stop auto-updating content.
+            Absolutely positioned so it hangs below the indicator without
+            pulling the dots off the vertical centre. */}
         {!reducedMotion && (
           <button
             onClick={() => setUserPaused((v) => !v)}
@@ -227,7 +275,7 @@ export default function HeroBanner({ items }: Props) {
               userPaused ? "Resume auto-rotation" : "Pause auto-rotation"
             }
             aria-pressed={userPaused}
-            className="size-8 grid place-items-center rounded-full glass border border-white/10 hover:bg-white/15 transition"
+            className="absolute top-full mt-4 size-8 grid place-items-center rounded-full glass border border-white/10 hover:bg-white/15 transition"
           >
             {userPaused ? (
               <Play className="size-3.5 fill-current" />
@@ -236,40 +284,8 @@ export default function HeroBanner({ items }: Props) {
             )}
           </button>
         )}
-
-        {/* Segmented progress indicators */}
-        <div className="flex items-center gap-1.5">
-          {items.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              aria-label={`Go to slide ${i + 1} of ${items.length}`}
-              aria-current={i === current}
-              className={cn(
-                "relative h-[3px] rounded-full overflow-hidden transition-all duration-300 bg-white/20",
-                i === current ? "w-10" : "w-3.5 hover:bg-white/40",
-              )}
-            >
-              {/* Completed slides */}
-              {i < current && (
-                <span className="absolute inset-0 bg-white/70 rounded-full" />
-              )}
-              {/* Active slide progress */}
-              {i === current && (
-                <span
-                  className="absolute inset-y-0 left-0 bg-white rounded-full"
-                  style={{ width: `${progress}%` }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Slide counter */}
-        <span className="text-[11px] font-medium tabular-nums text-white/40 tracking-wider hidden sm:block">
-          {String(current + 1).padStart(2, "0")}&thinsp;/&thinsp;{String(items.length).padStart(2, "0")}
-        </span>
       </div>
+
     </section>
   );
 }
