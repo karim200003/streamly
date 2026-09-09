@@ -22,12 +22,23 @@ describe("getServers", () => {
   });
 
   it("uses movie paths for movies and season/episode paths for TV", () => {
-    const movie = getServers("movie", 603).map((s) => s.url);
-    expect(movie.some((u) => u.includes("/movie/603"))).toBe(true);
+    for (const url of getServers("movie", 603).map((s) => s.url)) {
+      expect(url).toContain("603");
+    }
 
-    // Every remaining provider uses the /tv/<id>/<season>/<episode> form.
+    // Most providers put season/episode in the path; 2Embed uses a
+    // separate /embedtv/ route carrying them as query params. Assert on
+    // the values reaching the provider rather than on one URL shape, so
+    // this keeps working as providers come and go.
     for (const url of getServers("tv", 1399, 2, 5).map((s) => s.url)) {
-      expect(url).toContain("/tv/1399/2/5");
+      const u = new URL(url);
+      const values = new Set<string>([
+        ...u.pathname.split("/"),
+        ...[...u.searchParams.values()],
+      ]);
+      expect(values).toContain("1399");
+      expect(values).toContain("2");
+      expect(values).toContain("5");
     }
   });
 
@@ -41,15 +52,23 @@ describe("getServers", () => {
       startTime: 125.7,
     });
     for (const s of withResume) {
-      if (!s.supportsProgress) continue;
-      // Floored to whole seconds.
-      expect(s.url).toContain("progress=125");
+      const values = [...new URL(s.url).searchParams.values()];
+      // Providers name the param differently (VidLink uses `startAt`),
+      // so assert on the value: floored to whole seconds, and only sent
+      // to providers that can actually act on it.
+      if (s.supportsProgress) {
+        expect(values).toContain("125");
+      } else {
+        expect(values).not.toContain("125");
+      }
     }
   });
 
   it("omits the resume offset when there is nothing to resume", () => {
     for (const s of getServers("movie", 603, undefined, undefined, { startTime: 0 })) {
-      expect(s.url).not.toContain("progress=");
+      const params = new URL(s.url).searchParams;
+      expect(params.has("progress")).toBe(false);
+      expect(params.has("startAt")).toBe(false);
     }
   });
 
