@@ -12,7 +12,7 @@ import LanguagePicker from "./LanguagePicker";
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/movies", label: "Movies" },
-  { href: "/tv", label: "TV Shows" },
+  { href: "/tv", label: "Shows" },
   { href: "/favorites", label: "My List" },
   { href: "/history", label: "History" },
 ];
@@ -59,41 +59,65 @@ export default function Navbar() {
 
   return (
     <>
-      <header
-        className={cn(
-          "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-          scrolled
-            ? "bg-[rgba(10,10,15,0.85)] backdrop-blur-md border-b border-white/5"
-            : "bg-gradient-to-b from-black/70 to-transparent",
-        )}
-      >
-        <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10 h-16 flex items-center gap-3 sm:gap-6">
+      {/* Floating bar. It sits *over* the page rather than occupying a
+          strip of it, so a full-bleed hero can run edge to edge behind
+          it. No background of its own until you scroll — over artwork
+          the glass pills supply all the separation that's needed. */}
+      <header className="fixed inset-x-0 top-0 z-50 pointer-events-none">
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 h-24 transition-opacity duration-300",
+            "bg-gradient-to-b from-black/70 via-black/25 to-transparent",
+            scrolled ? "opacity-0" : "opacity-100",
+          )}
+          aria-hidden
+        />
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 h-[4.5rem] transition-opacity duration-300",
+            "bg-[rgba(8,8,11,0.72)] backdrop-blur-xl border-b border-white/[0.07]",
+            scrolled ? "opacity-100" : "opacity-0",
+          )}
+          aria-hidden
+        />
+
+        <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10 h-[4.5rem] flex items-center gap-3">
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setOpen(true)}
-            className="md:hidden p-2 -ml-2 rounded-md hover:bg-white/5 transition"
+            className="pointer-events-auto md:hidden size-10 -ml-2 grid place-items-center rounded-full hover:bg-white/10 transition"
             aria-label="Open menu"
             aria-expanded={open}
           >
             <Menu className="size-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-[var(--color-accent)]" aria-hidden="true">▶</span>
-            <span className="tracking-tight">Streamly</span>
+          <Link
+            href="/"
+            className="pointer-events-auto flex items-center gap-2 font-bold text-lg tracking-tight shrink-0"
+          >
+            <span
+              className="grid place-items-center size-7 rounded-lg bg-[var(--color-accent)] text-white text-[0.7rem]"
+              aria-hidden="true"
+            >
+              ▶
+            </span>
+            <span>Streamly</span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Desktop nav — one frosted container, active item as a solid
+              pill. Reads as a control rather than a row of text links. */}
+          <nav className="pointer-events-auto hidden md:flex items-center gap-1 ml-auto p-1 rounded-full glass">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive(item.href) ? "page" : undefined}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-sm transition-colors",
+                  "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                   isActive(item.href)
-                    ? "text-white"
-                    : "text-[var(--color-muted)] hover:text-white",
+                    ? "bg-white text-black"
+                    : "text-white/70 hover:text-white hover:bg-white/10",
                 )}
               >
                 {item.label}
@@ -102,11 +126,12 @@ export default function Navbar() {
             {session?.user?.role === "ADMIN" && (
               <Link
                 href={ADMIN_NAV.href}
+                aria-current={isActive(ADMIN_NAV.href) ? "page" : undefined}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-sm transition-colors",
+                  "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                   isActive(ADMIN_NAV.href)
-                    ? "text-[var(--color-accent)]"
-                    : "text-[var(--color-accent)]/70 hover:text-[var(--color-accent)]",
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "text-[var(--color-accent)] hover:bg-[var(--color-accent)]/15",
                 )}
               >
                 {ADMIN_NAV.label}
@@ -114,33 +139,29 @@ export default function Navbar() {
             )}
           </nav>
 
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
-            <div className="hidden sm:block">
+          <div className="pointer-events-auto ml-auto md:ml-2 flex items-center gap-1.5">
+            <div className="hidden lg:block">
               <LanguagePicker />
             </div>
             <Link
               href="/search"
-              className="p-2 rounded-md hover:bg-white/5 transition-colors"
+              className="size-10 grid place-items-center rounded-full glass hover:bg-white/15 transition"
               aria-label="Search"
             >
-              <Search className="size-5" />
+              <Search className="size-[1.05rem]" />
             </Link>
             {status === "authenticated" ? (
-              <div className="flex items-center gap-2">
-                <span className="hidden lg:inline text-sm text-[var(--color-muted)]">
-                  {session.user.name ?? session.user.email}
-                </span>
-                <button
-                  onClick={() => signOut()}
-                  className="px-3 py-1.5 rounded-md text-sm bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  Sign out
-                </button>
-              </div>
+              <button
+                onClick={() => signOut()}
+                className="px-4 py-2 rounded-full text-sm font-medium glass hover:bg-white/15 transition"
+                title={session.user.name ?? session.user.email ?? "Sign out"}
+              >
+                Sign out
+              </button>
             ) : (
               <Link
                 href="/sign-in"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 transition"
               >
                 <User className="size-4" />
                 <span className="hidden sm:inline">Sign in</span>
@@ -154,7 +175,7 @@ export default function Navbar() {
       {open && (
         <div className="md:hidden fixed inset-0 z-[60]">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-hidden
           />
@@ -163,19 +184,24 @@ export default function Navbar() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-[var(--color-bg)] border-r border-white/10 flex flex-col"
+            className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-[var(--color-bg-2)] border-r border-white/10 flex flex-col"
           >
-            <div className="h-16 px-5 flex items-center justify-between border-b border-white/5">
+            <div className="h-[4.5rem] px-5 flex items-center justify-between border-b border-white/[0.07]">
               <Link
                 href="/"
-                className="flex items-center gap-2 font-bold text-xl"
+                className="flex items-center gap-2 font-bold text-lg tracking-tight"
               >
-                <span className="text-[var(--color-accent)]" aria-hidden="true">▶</span>
-                <span className="tracking-tight">Streamly</span>
+                <span
+                  className="grid place-items-center size-7 rounded-lg bg-[var(--color-accent)] text-white text-[0.7rem]"
+                  aria-hidden="true"
+                >
+                  ▶
+                </span>
+                <span>Streamly</span>
               </Link>
               <button
                 onClick={() => setOpen(false)}
-                className="p-2 -mr-2 rounded-md hover:bg-white/5"
+                className="size-10 -mr-2 grid place-items-center rounded-full hover:bg-white/10"
                 aria-label="Close menu"
               >
                 <X className="size-5" />
@@ -186,11 +212,12 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive(item.href) ? "page" : undefined}
                   className={cn(
-                    "block px-4 py-3 rounded-lg text-base transition-colors",
+                    "block px-4 py-3 rounded-xl text-base font-medium transition-colors",
                     isActive(item.href)
-                      ? "bg-white/10 text-white"
-                      : "text-white/80 hover:bg-white/5 hover:text-white",
+                      ? "bg-white text-black"
+                      : "text-white/80 hover:bg-white/10 hover:text-white",
                   )}
                 >
                   {item.label}
@@ -200,9 +227,9 @@ export default function Navbar() {
                 <Link
                   href={ADMIN_NAV.href}
                   className={cn(
-                    "block px-4 py-3 rounded-lg text-base transition-colors text-[var(--color-accent)]",
+                    "block px-4 py-3 rounded-xl text-base font-medium transition-colors text-[var(--color-accent)]",
                     isActive(ADMIN_NAV.href)
-                      ? "bg-[var(--color-accent)]/10"
+                      ? "bg-[var(--color-accent)]/15"
                       : "hover:bg-white/5",
                   )}
                 >
@@ -210,7 +237,7 @@ export default function Navbar() {
                 </Link>
               )}
             </nav>
-            <div className="border-t border-white/5 p-4 space-y-3">
+            <div className="border-t border-white/[0.07] p-4 space-y-3">
               <div>
                 <div className="text-xs text-[var(--color-muted)] mb-2">
                   Language
@@ -230,7 +257,7 @@ export default function Navbar() {
                       setOpen(false);
                       signOut();
                     }}
-                    className="w-full py-2 rounded-md text-sm bg-white/5 hover:bg-white/10 transition"
+                    className="w-full py-2.5 rounded-full text-sm font-medium bg-white/10 hover:bg-white/15 transition"
                   >
                     Sign out
                   </button>

@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#0a0a0f",
+  themeColor: "#08080b",
   width: "device-width",
   initialScale: 1,
 };
@@ -60,13 +60,28 @@ export default function RootLayout({
         <MotionProvider>
           <SessionProvider refetchOnWindowFocus={false}>
             <Navbar />
-            <main className="flex-1 pt-16">{children}</main>
-            <footer className="border-t border-white/5 py-8 text-center text-sm text-[var(--color-muted)] space-x-3">
-              <span>Built with Next.js · Data by TMDB</span>
-              <span>·</span>
-              <Link href="/legal" className="hover:text-white">
-                Disclaimer &amp; legal
-              </Link>
+            {/* Matches the floating bar's height. Full-bleed pages (the
+                hero, the player) cancel it with -mt-[4.5rem] so their
+                artwork runs behind the bar. */}
+            <main className="flex-1 pt-[4.5rem]">{children}</main>
+            <footer className="mt-16 border-t border-white/[0.07] py-10 px-6">
+              <div className="mx-auto max-w-screen-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--color-muted)]">
+                <div className="flex items-center gap-2 font-semibold tracking-tight text-white/80">
+                  <span
+                    className="grid place-items-center size-6 rounded-md bg-[var(--color-accent)] text-white text-[0.6rem]"
+                    aria-hidden="true"
+                  >
+                    ▶
+                  </span>
+                  Streamly
+                </div>
+                <div className="flex items-center gap-4">
+                  <span>Data by TMDB</span>
+                  <Link href="/legal" className="hover:text-white transition-colors">
+                    Disclaimer &amp; legal
+                  </Link>
+                </div>
+              </div>
             </footer>
             <RegisterServiceWorker />
           </SessionProvider>
