@@ -6,12 +6,16 @@ import {
   type TmdbMedia,
 } from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
-import HeroBanner from "@/components/HeroBanner";
-import Carousel from "@/components/Carousel";
-import MissingApiNotice from "@/components/MissingApiNotice";
-import ContinueWatching from "@/components/ContinueWatching";
-import ContinueWatchingSkeleton from "@/components/ContinueWatchingSkeleton";
+import { mapMediaSummaries } from "@/features/catalog/domain";
+import HeroBanner from "@/features/catalog/components/HeroBanner";
+import Carousel from "@/features/catalog/components/Carousel";
+import MissingApiNotice from "@/features/catalog/components/MissingApiNotice";
+import ContinueWatching from "@/features/history/components/ContinueWatching";
+import ContinueWatchingSkeleton from "@/features/history/components/ContinueWatchingSkeleton";
 import { Suspense } from "react";
+import { logger } from "@/lib/logger";
+
+const log = logger("home");
 
 async function pickAdminHero(): Promise<TmdbMedia | null> {
   const featured = await prisma.featured
@@ -33,26 +37,46 @@ async function pickAdminHero(): Promise<TmdbMedia | null> {
       featured.mediaType === "movie" ? featured.releaseDate ?? "" : undefined,
     first_air_date:
       featured.mediaType === "tv" ? featured.releaseDate ?? "" : undefined,
-    media_type: featured.mediaType as "movie" | "tv",
+    // `mediaType` is a MediaType enum column now, so no cast is needed.
+    media_type: featured.mediaType,
   };
+}
+
+/**
+ * Each rail is independent, so one upstream failure should cost that
+ * rail and nothing else. `Promise.all` used to reject the whole render
+ * and 500 the home page whenever a single TMDB call failed.
+ */
+async function rail(
+  load: () => Promise<TmdbMedia[]>,
+  name: string,
+): Promise<TmdbMedia[]> {
+  try {
+    return await load();
+  } catch (err) {
+    log.error(`${name} rail failed`, err);
+    return [];
+  }
 }
 
 export default async function HomePage() {
   const [adminHero, popularMovies, popularTv, topRated, trending] =
     await Promise.all([
       pickAdminHero(),
-      getPopularMovies(),
-      getPopularTv(),
-      getTopRatedMovies(),
-      getTrending("week"),
+      rail(getPopularMovies, "popular movies"),
+      rail(getPopularTv, "popular tv"),
+      rail(getTopRatedMovies, "top rated"),
+      rail(() => getTrending("week"), "trending"),
     ]);
 
-  const heroItems: TmdbMedia[] = [
+  // The hero needs a backdrop, so titles without one are skipped rather
+  // than rendered as an empty banner.
+  const heroItems = mapMediaSummaries([
     ...(adminHero ? [adminHero] : []),
     ...trending
       .filter((m) => m.backdrop_path && (!adminHero || m.id !== adminHero.id))
       .slice(0, adminHero ? 5 : 6),
-  ];
+  ]);
 
   return (
     <>
@@ -61,10 +85,25 @@ export default async function HomePage() {
       <Suspense fallback={<ContinueWatchingSkeleton />}>
         <ContinueWatching />
       </Suspense>
-      <Carousel title="Trending This Week" items={trending} priority fancy />
-      <Carousel title="Popular Movies" items={popularMovies} />
-      <Carousel title="Popular TV Shows" items={popularTv} />
-      <Carousel title="Top Rated" items={topRated} />
+      {/* Carousel already renders nothing for an empty list. */}
+      <Carousel
+        title="Trending This Week"
+        items={mapMediaSummaries(trending)}
+        priority
+        fancy
+      />
+      <Carousel
+        title="Popular Movies"
+        items={mapMediaSummaries(popularMovies, "movie")}
+      />
+      <Carousel
+        title="Popular TV Shows"
+        items={mapMediaSummaries(popularTv, "tv")}
+      />
+      <Carousel
+        title="Top Rated"
+        items={mapMediaSummaries(topRated, "movie")}
+      />
     </>
   );
 }

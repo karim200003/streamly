@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MediaGrid from "@/components/ui/MediaGrid";
 import Image from "next/image";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -44,7 +45,7 @@ export default async function FavoritesPage() {
           Nothing here yet. Browse titles and tap the heart to add them.
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <MediaGrid className="mt-6">
           {favorites.map((f) => {
             const poster = imageUrl(f.posterPath, "w500");
             return (
@@ -77,7 +78,7 @@ export default async function FavoritesPage() {
               </Link>
             );
           })}
-        </div>
+        </MediaGrid>
       )}
     </div>
   );

@@ -10,6 +10,10 @@ const googleEnabled = !!(
   process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
 );
 
+// How long a JWT may go without being re-checked against the database.
+// Bans and role changes take effect within this window.
+const REVALIDATE_AFTER_MS = 60_000;
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
@@ -74,9 +78,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = (user as { id: string }).id;
       }
-      // Hydrate role on every issuance from DB so promotions/demotions
-      // and bans take effect on the next request without re-login.
-      if (token.id && (trigger === "signIn" || trigger === "update" || !token.role)) {
+      // Re-read the user periodically so promotions, demotions and bans
+      // take effect without waiting for the JWT to expire.
+      //
+      // Previously this only ran on signIn/update or when `role` was
+      // unset, which meant that after the first issuance the `banned`
+      // check below never executed again — a banned user kept full
+      // access for the life of their token. We now also refresh once the
+      // token is older than REVALIDATE_AFTER_MS. That bounds the staleness
+      // window without paying an indexed lookup on literally every
+      // request, which a JWT session strategy exists to avoid.
+      const checkedAt =
+        typeof token.checkedAt === "number" ? token.checkedAt : 0;
+      const isStale = Date.now() - checkedAt > REVALIDATE_AFTER_MS;
+
+      if (
+        token.id &&
+        (trigger === "signIn" || trigger === "update" || !token.role || isStale)
+      ) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { role: true, banned: true, email: true, emailVerified: true },
@@ -84,6 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (fresh) {
           if (fresh.banned) return null; // forces sign-out
           token.role = fresh.role;
+          token.checkedAt = Date.now();
           // Auto-promote ONLY on OAuth sign-in to a verified email. This
           // blocks the credentials-pre-registration takeover: an attacker
           // who registers an admin's email via /api/register has

@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { watchHref } from "@/lib/watch-href";
 import Image from "next/image";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { imageUrl } from "@/lib/tmdb";
-import RemoveHistoryButton from "@/components/RemoveHistoryButton";
+import RemoveHistoryButton from "@/features/history/components/RemoveHistoryButton";
 
 export const dynamic = "force-dynamic";
+
+/** Matches the cap used by GET /api/history. */
+const MAX_HISTORY_ITEMS = 100;
 
 export default async function HistoryPage() {
   const session = await auth();
@@ -27,9 +31,12 @@ export default async function HistoryPage() {
     );
   }
 
+  // Bounded: this findMany had no `take`, so a heavy account would load
+  // its entire history into one server render.
   const items = await prisma.watchHistory.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
+    take: MAX_HISTORY_ITEMS,
   });
 
   return (
@@ -49,10 +56,6 @@ export default async function HistoryPage() {
           {items.map((it) => {
             const poster = imageUrl(it.posterPath, "w200");
             const detailsHref = `/${it.mediaType}/${it.tmdbId}`;
-            const watchHref =
-              it.mediaType === "tv" && it.season > 0 && it.episode > 0
-                ? `/watch/tv/${it.tmdbId}?s=${it.season}&e=${it.episode}`
-                : `/watch/${it.mediaType}/${it.tmdbId}`;
             return (
               <li
                 key={it.id}
@@ -85,14 +88,14 @@ export default async function HistoryPage() {
                   </div>
                 </div>
                 <Link
-                  href={watchHref}
+                  href={watchHref(it)}
                   className="px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-sm transition"
                 >
                   Resume
                 </Link>
                 <RemoveHistoryButton
                   tmdbId={it.tmdbId}
-                  mediaType={it.mediaType as "movie" | "tv"}
+                  mediaType={it.mediaType}
                   season={it.season}
                   episode={it.episode}
                 />

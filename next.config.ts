@@ -15,7 +15,7 @@ const EMBED_HOSTS = [
 // (inline boot script). `'unsafe-eval'` is required by React in DEV ONLY
 // (callstack reconstruction / Turbopack HMR) — we include it in dev and
 // drop it in prod, where React never uses eval. If you adopt nonce-based
-// CSP, replace `'unsafe-inline'` with `'nonce-<value>'` via middleware.
+// CSP, replace `'unsafe-inline'` with `'nonce-<value>'` via src/proxy.ts.
 // `frame-ancestors 'none'` blocks clickjacking; nothing self-iframes.
 const isDev = process.env.NODE_ENV !== "production";
 const scriptSrc = isDev

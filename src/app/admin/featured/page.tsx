@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { imageUrl } from "@/lib/tmdb";
-import FeaturedActions from "@/components/admin/FeaturedActions";
-import AddFeaturedForm from "@/components/admin/AddFeaturedForm";
+import FeaturedActions from "@/features/admin/components/FeaturedActions";
+import AddFeaturedForm from "@/features/admin/components/AddFeaturedForm";
 
 export const dynamic = "force-dynamic";
 

@@ -6,8 +6,8 @@ import { getServers } from "@/lib/vidsrc";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerLang } from "@/lib/locale-server";
-import Player from "@/components/Player";
-import RecordWatch from "@/components/RecordWatch";
+import Player from "@/features/watch/components/Player";
+import RecordWatch from "@/features/watch/components/RecordWatch";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,42 @@ const RESUME_MIN_SECONDS = 15;
 // Don't resume if the user was within this many seconds of the end —
 // they probably want to start fresh next time.
 const RESUME_EDGE_SECONDS = 90;
+
+/**
+ * Saved playback position for this user/title/episode, or `undefined`
+ * when there is nothing worth resuming. Cheap: served by the unique
+ * (userId, tmdbId, mediaType, season, episode) compound index.
+ */
+async function resolveResumePoint(
+  mediaType: MediaType,
+  tmdbId: number,
+  season: number | undefined,
+  episode: number | undefined,
+): Promise<number | undefined> {
+  const session = await auth();
+  if (!session?.user?.id) return undefined;
+
+  const seasonKey = mediaType === "tv" ? Number(season ?? 0) : 0;
+  const episodeKey = mediaType === "tv" ? Number(episode ?? 0) : 0;
+  const hist = await prisma.watchHistory.findUnique({
+    where: {
+      userId_tmdbId_mediaType_season_episode: {
+        userId: session.user.id,
+        tmdbId,
+        mediaType,
+        season: seasonKey,
+        episode: episodeKey,
+      },
+    },
+    select: { progress: true, duration: true },
+  });
+  if (!hist || hist.progress < RESUME_MIN_SECONDS) return undefined;
+
+  const remaining = hist.duration - hist.progress;
+  // Resume unless we're near the credits (or we don't know the duration).
+  if (hist.duration && remaining <= RESUME_EDGE_SECONDS) return undefined;
+  return Math.floor(hist.progress);
+}
 
 export default async function WatchPage({
   params,
@@ -31,40 +67,20 @@ export default async function WatchPage({
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId)) notFound();
 
-  const mediaType = type as MediaType;
+  const mediaType: MediaType = type;
   const season = sp.s ? Number(sp.s) : undefined;
   const episode = sp.e ? Number(sp.e) : undefined;
 
-  // Look up resume position for this user/title/episode. Cheap: indexed
-  // by the unique (userId, tmdbId, mediaType, season, episode) compound.
-  const session = await auth();
-  let startTime: number | undefined;
-  if (session?.user?.id) {
-    const seasonKey = mediaType === "tv" ? Number(season ?? 0) : 0;
-    const episodeKey = mediaType === "tv" ? Number(episode ?? 0) : 0;
-    const hist = await prisma.watchHistory.findUnique({
-      where: {
-        userId_tmdbId_mediaType_season_episode: {
-          userId: session.user.id,
-          tmdbId,
-          mediaType,
-          season: seasonKey,
-          episode: episodeKey,
-        },
-      },
-      select: { progress: true, duration: true },
-    });
-    if (hist && hist.progress >= RESUME_MIN_SECONDS) {
-      const remaining = hist.duration - hist.progress;
-      // Resume unless we're near the credits (or we don't know duration).
-      if (!hist.duration || remaining > RESUME_EDGE_SECONDS) {
-        startTime = Math.floor(hist.progress);
-      }
-    }
-  }
+  // Resume lookup and the TMDB metadata fetch are independent, so run
+  // them concurrently — the TMDB round-trip is the slowest leg of this
+  // page and it has no reason to wait on the session or the DB read.
+  const [startTime, dsLangRaw, details] = await Promise.all([
+    resolveResumePoint(mediaType, tmdbId, season, episode),
+    getServerLang(),
+    getBasicDetails(mediaType, tmdbId),
+  ]);
 
-  const dsLang = (await getServerLang()).split("-")[0];
-  const details = await getBasicDetails(mediaType, tmdbId);
+  const dsLang = dsLangRaw.split("-")[0];
   const servers = getServers(mediaType, tmdbId, season, episode, {
     startTime,
     dsLang,
@@ -90,7 +106,17 @@ export default async function WatchPage({
           )}
         </div>
       </div>
-      <Player servers={servers} />
+      <Player
+        servers={servers}
+        media={{
+          tmdbId,
+          mediaType,
+          title,
+          posterPath: details.poster_path,
+          season,
+          episode,
+        }}
+      />
       <RecordWatch
         tmdbId={tmdbId}
         mediaType={mediaType}

@@ -36,6 +36,25 @@ export {
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
+/**
+ * Upstream calls are on the critical path of every catalog render, so
+ * they get a hard ceiling. Without one, a TMDB stall holds the request
+ * open until the platform's own (much longer) timeout kills it, and one
+ * slow dependency becomes a site-wide outage.
+ */
+const TMDB_TIMEOUT_MS = 8_000;
+
+/** Thrown when TMDB itself fails, so callers can degrade deliberately. */
+export class TmdbError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "TmdbError";
+  }
+}
+
 interface TmdbList<T> {
   page: number;
   results: T[];
@@ -43,25 +62,45 @@ interface TmdbList<T> {
   total_results: number;
 }
 
-const HAS_KEY = !!process.env.TMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const HAS_KEY = !!TMDB_API_KEY;
 
 async function tmdb<T>(
   path: string,
   params: Record<string, string | number | undefined> = {},
   revalidate = 60 * 60,
 ): Promise<T> {
-  if (!HAS_KEY) throw new Error("TMDB_API_KEY missing");
+  // Narrowing the module-level const (rather than re-reading process.env)
+  // lets TypeScript prove the key is present, so no non-null assertion.
+  if (!TMDB_API_KEY) throw new Error("TMDB_API_KEY missing");
   const lang = await getServerLang();
 
   const url = new URL(`${TMDB_BASE}${path}`);
-  url.searchParams.set("api_key", process.env.TMDB_API_KEY!);
+  url.searchParams.set("api_key", TMDB_API_KEY);
   url.searchParams.set("language", lang);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
-  const res = await fetch(url, { next: { revalidate } });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      next: { revalidate },
+      signal: AbortSignal.timeout(TMDB_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // AbortError (timeout) and network failures land here.
+    throw new TmdbError(
+      `TMDB request failed for ${path}: ${
+        err instanceof Error ? err.message : "unknown error"
+      }`,
+    );
+  }
+
   if (!res.ok) {
-    throw new Error(`TMDB ${res.status} ${res.statusText} for ${path}`);
+    throw new TmdbError(
+      `TMDB ${res.status} ${res.statusText} for ${path}`,
+      res.status,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -108,12 +147,6 @@ export async function getDetails(type: MediaType, id: number) {
 export async function getBasicDetails(type: MediaType, id: number) {
   if (!HAS_KEY) return mock.details(type, id);
   return tmdb<TmdbDetails>(`/${type}/${id}`);
-}
-
-export async function getSimilar(type: MediaType, id: number) {
-  if (!HAS_KEY) return mock.popularMovies;
-  const data = await tmdb<TmdbList<TmdbMedia>>(`/${type}/${id}/similar`);
-  return data.results.map((m) => ({ ...m, media_type: type }));
 }
 
 /** Similar titles from a details payload (avoids a second TMDB request). */
@@ -197,17 +230,58 @@ export async function getTrendingSearches() {
     .slice(0, 8);
 }
 
-export async function search(query: string) {
+export async function search(query: string, page = 1) {
   if (!query.trim()) return [];
   if (!HAS_KEY) {
     return mock.trending.filter((m) =>
       (m.title ?? m.name ?? "").toLowerCase().includes(query.toLowerCase()),
     );
   }
-  const data = await tmdb<TmdbList<TmdbMedia>>("/search/multi", { query }, 0);
+  const data = await tmdb<TmdbList<TmdbMedia>>(
+    "/search/multi",
+    { query, page },
+    0,
+  );
   return data.results.filter(
     (r) => r.media_type === "movie" || r.media_type === "tv",
   );
+}
+
+/**
+ * How many pages of `/search/multi` to pull before filtering.
+ *
+ * TMDB's multi-search accepts no genre/year/rating parameters, so those
+ * filters have to be applied after the fact. Pulling a single page (the
+ * old client-side behaviour) meant a filter could hide every result and
+ * report "no matches" for titles that plainly exist. Widening the pool
+ * makes that far rarer; going much beyond this just burns quota.
+ */
+const SEARCH_POOL_PAGES = 3;
+
+/**
+ * Multi-search across several pages, de-duplicated.
+ *
+ * Pages are fetched concurrently — they don't depend on each other, and
+ * TMDB returns a stable ordering for a given query.
+ */
+export async function searchPool(query: string): Promise<TmdbMedia[]> {
+  if (!query.trim()) return [];
+
+  const pages = await Promise.all(
+    Array.from({ length: SEARCH_POOL_PAGES }, (_, i) =>
+      search(query, i + 1).catch(() => [] as TmdbMedia[]),
+    ),
+  );
+
+  const seen = new Set<string>();
+  const out: TmdbMedia[] = [];
+  for (const result of pages.flat()) {
+    const key = `${result.media_type}-${result.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(result);
+  }
+  return out;
 }
 
 const PLACEHOLDER_BACKDROP = null;

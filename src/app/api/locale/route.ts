@@ -12,6 +12,11 @@ export async function POST(req: Request) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365, // 1y
     sameSite: "lax",
+    // Deliberately NOT httpOnly: LanguagePicker seeds its <select> from
+    // document.cookie on mount. This holds a display-language preference
+    // — no secret, no credential — so httpOnly would break that read
+    // while protecting nothing.
+    secure: process.env.NODE_ENV === "production",
   });
   return res;
 }

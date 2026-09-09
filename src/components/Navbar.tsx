@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, User, Menu, X } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import LanguagePicker from "./LanguagePicker";
 
 const NAV = [
@@ -23,6 +24,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
+  const drawerRef = useRef<HTMLElement>(null);
+  const closeDrawer = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -31,10 +34,15 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close drawer on route change
+  // Close drawer on route change.
   useEffect(() => {
     queueMicrotask(() => setOpen(false));
   }, [pathname]);
+
+  // The drawer declared role="dialog" but had no aria-modal, no focus
+  // containment and no Escape handler — it could only be dismissed by
+  // clicking the overlay, which is mouse-only.
+  useFocusTrap(drawerRef, open, closeDrawer);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -71,7 +79,7 @@ export default function Navbar() {
           </button>
 
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-[var(--color-accent)]">▶</span>
+            <span className="text-[var(--color-accent)]" aria-hidden="true">▶</span>
             <span className="tracking-tight">Streamly</span>
           </Link>
 
@@ -151,7 +159,9 @@ export default function Navbar() {
             aria-hidden
           />
           <aside
+            ref={drawerRef}
             role="dialog"
+            aria-modal="true"
             aria-label="Navigation menu"
             className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-[var(--color-bg)] border-r border-white/10 flex flex-col"
           >
@@ -160,7 +170,7 @@ export default function Navbar() {
                 href="/"
                 className="flex items-center gap-2 font-bold text-xl"
               >
-                <span className="text-[var(--color-accent)]">▶</span>
+                <span className="text-[var(--color-accent)]" aria-hidden="true">▶</span>
                 <span className="tracking-tight">Streamly</span>
               </Link>
               <button

@@ -12,7 +12,3 @@ export function formatRuntime(minutes?: number | null) {
   return h ? `${h}h ${m}m` : `${m}m`;
 }
 
-export function formatYear(date?: string | null) {
-  if (!date) return "";
-  return date.slice(0, 4);
-}

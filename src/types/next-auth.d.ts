@@ -16,5 +16,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: "USER" | "ADMIN";
+    /** Epoch ms of the last database revalidation of role/banned. */
+    checkedAt?: number;
   }
 }
