@@ -1,17 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0f;
-  --color-bg-2: #11111a;
-  --color-bg-3: #16161f;
-  --color-fg: #ededf0;
-  --color-muted: #8a8a99;
+  /* Near-black ground. The old palette leaned blue-purple and carried
+     two ambient radial glows; both read as dated next to a flat,
+     cinematic black that lets poster art supply all the colour. */
+  --color-bg: #08080b;
+  --color-bg-2: #101015;
+  --color-bg-3: #17171d;
+  --color-fg: #f4f4f6;
+  --color-muted: #9a9aa6;
   --color-accent: #ef4444;
   --color-accent-2: #f97316;
-  --color-card: rgba(255, 255, 255, 0.04);
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-card: rgba(255, 255, 255, 0.045);
+  --color-border: rgba(255, 255, 255, 0.09);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-display: var(--font-display-serif), "Instrument Serif", "Iowan Old Style", "Apple Garamond", serif;
+  --font-display: var(--font-display-serif), "Instrument Serif", "Iowan Old Style", serif;
+
+  /* One radius scale, used everywhere, so tiles/sheets/pills agree. */
+  --radius-tile: 0.875rem;
+  --radius-sheet: 1.25rem;
 }
 
 :root {
@@ -26,22 +33,30 @@ body {
 
 body {
   font-family: var(--font-sans);
-  /* Subtler ambient glow than before — pulls less attention away from posters. */
-  background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(239, 68, 68, 0.07), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(99, 102, 241, 0.05), transparent 60%),
-    var(--color-bg);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* Display serif for hero titles + emphasized headings (Apple TV+ feel). */
+/* Display serif, reserved for the hero title only. Section headings use
+   the sans face so the page reads as one system instead of two. */
 .font-display {
   font-family: var(--font-display);
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+}
+
+/* Section heading — one definition, so every rail matches. */
+.section-title {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--color-fg);
+}
+@media (min-width: 640px) {
+  .section-title {
+    font-size: 1.1875rem;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -56,18 +71,20 @@ body {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* Frosted surface. Lighter and less blue than before so it reads as
+   glass over artwork rather than a grey panel. */
 .glass {
-  background: rgba(20, 20, 30, 0.55);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-strong {
-  background: rgba(15, 15, 22, 0.7);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--color-border);
+  background: rgba(10, 10, 14, 0.72);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -77,7 +94,6 @@ body {
   scrollbar-width: none;
 }
 
-/* Smoother, more refined shimmer (200% → 250% sweep, ease-out, longer cycle). */
 .skeleton {
   background: linear-gradient(
     100deg,
@@ -87,7 +103,7 @@ body {
   );
   background-size: 250% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-tile);
 }
 
 @keyframes shimmer {
@@ -99,8 +115,6 @@ body {
   }
 }
 
-/* Edge fade utility for horizontal carousels — softens the trailing
-   end so cards "fade off" the screen instead of being cut hard. */
 .fade-edges-x {
   -webkit-mask-image: linear-gradient(
     to right,
@@ -118,8 +132,6 @@ body {
   );
 }
 
-/* Subtle entrance animation for hero text and other reveals. Avoids
-   a Framer Motion roundtrip for elements that just need a fade-in. */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -134,27 +146,74 @@ body {
   animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Soft red glow under the primary CTA. */
-.shadow-accent-soft {
-  box-shadow:
-    0 8px 24px -8px rgba(239, 68, 68, 0.4),
-    0 2px 6px -2px rgba(239, 68, 68, 0.2);
+/* Primary CTA: a solid white pill. Reads cleaner over artwork than a
+   coloured button with a glow, and keeps contrast at AA on any frame. */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6875rem 1.5rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+.btn-primary:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+.btn-primary:active {
+  transform: scale(0.97);
 }
 
-/* Used for the score chip on cards — small frosted pill. */
+/* Secondary action: frosted pill that sits beside the primary CTA. */
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6875rem 1.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-weight: 550;
+  font-size: 0.9375rem;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+.btn-glass:active {
+  transform: scale(0.97);
+}
+
+/* Small frosted pill — score chips, badges. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.125rem 0.5rem;
+  padding: 0.1875rem 0.5rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* Focus ring — one definition so keyboard users get a consistent,
+   visible target on dark artwork. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

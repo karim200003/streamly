@@ -80,7 +80,7 @@ export default function HeroBanner({ items }: Props) {
     <section
       aria-roledescription="carousel"
       aria-label="Featured titles"
-      className="relative -mt-16 h-[85vh] min-h-[600px] w-full overflow-hidden group select-none"
+      className="relative -mt-[4.5rem] h-[82vh] min-h-[560px] w-full overflow-hidden group select-none"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => {
@@ -114,18 +114,11 @@ export default function HeroBanner({ items }: Props) {
         </m.div>
       </AnimatePresence>
 
-      {/* Cinematic gradient stack */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/80 via-40% to-transparent pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-bg)] via-[var(--color-bg)]/60 via-30% to-transparent to-70% pointer-events-none" />
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-      <div
-        className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' /%3E%3C/svg%3E\")",
-        }}
-        aria-hidden
-      />
+      {/* Two scrims: one to seat the copy at the bottom, one across the
+          left for legibility. The previous stack layered three gradients
+          plus an SVG noise overlay, which dulled the artwork. */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/55 via-45% to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 via-45% to-transparent pointer-events-none" />
 
       {/* ── Content ──────────────────────────────────────────────── */}
       <div className="relative z-10 mx-auto max-w-screen-2xl h-full px-4 sm:px-6 lg:px-10 flex flex-col justify-end pb-24 pt-24">
@@ -148,7 +141,7 @@ export default function HeroBanner({ items }: Props) {
             </div>
 
             {/* Title */}
-            <h1 className="font-display italic text-5xl sm:text-6xl lg:text-7xl leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.55)]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.02] tracking-[-0.03em] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)]">
               {title}
             </h1>
 
@@ -181,15 +174,12 @@ export default function HeroBanner({ items }: Props) {
             <div className="flex items-center gap-3 pt-3">
               <Link
                 href={`/watch/${type}/${media.id}`}
-                className="group/btn inline-flex items-center gap-2.5 px-7 py-3 rounded-full bg-white text-black font-semibold hover:bg-white/95 active:scale-[0.97] transition-all shadow-[0_8px_30px_-4px_rgba(255,255,255,0.3)]"
+                className="btn-primary"
               >
-                <Play className="size-4 fill-black transition-transform group-hover/btn:scale-110" />
+                <Play className="size-4 fill-black" />
                 Play
               </Link>
-              <Link
-                href={media.href}
-                className="inline-flex items-center gap-2.5 px-7 py-3 rounded-full glass hover:bg-white/10 active:scale-[0.97] transition-all"
-              >
+              <Link href={media.href} className="btn-glass">
                 <Info className="size-4" />
                 More info
               </Link>

@@ -90,7 +90,6 @@ export default async function HomePage() {
         title="Trending This Week"
         items={mapMediaSummaries(trending)}
         priority
-        fancy
       />
       <Carousel
         title="Popular Movies"

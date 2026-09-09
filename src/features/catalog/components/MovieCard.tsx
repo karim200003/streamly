@@ -145,15 +145,17 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
       className="group relative"
     >
       <Link href={media.href} className="block">
-        {/* Poster surface — soft outer glow on hover via ring + brightness, plus an accent tint shadow. */}
+        {/* Poster surface. The old treatment stacked a red glow, a white
+            ring and a border on hover; a single soft ring plus lift reads
+            calmer and lets the artwork carry the card. */}
         <div
           className={cn(
-            "relative aspect-[2/3] rounded-xl overflow-hidden bg-[var(--color-bg-2)]",
-            "border border-white/5 transition-all duration-300",
-            "shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]",
-            "group-hover:shadow-[0_16px_40px_-12px_rgba(239,68,68,0.35),0_8px_20px_-6px_rgba(0,0,0,0.6)]",
-            "group-hover:ring-2 group-hover:ring-white/20",
-            "group-hover:border-white/15",
+            "relative aspect-[2/3] overflow-hidden bg-[var(--color-bg-2)]",
+            "rounded-[var(--radius-tile)] border border-white/[0.07]",
+            "shadow-[0_10px_30px_-14px_rgba(0,0,0,0.9)]",
+            "transition-[box-shadow,border-color] duration-300",
+            "group-hover:border-white/20",
+            "group-hover:shadow-[0_18px_44px_-16px_rgba(0,0,0,0.95)]",
           )}
         >
           {poster ? (
@@ -165,7 +167,7 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
               sizes="(max-width: 640px) 160px, (max-width: 1024px) 180px, 200px"
               className={cn(
                 "object-cover transition-all duration-700 ease-out",
-                "group-hover:scale-[1.08]",
+                "group-hover:scale-[1.06]",
                 hidePoster && "opacity-0 scale-110",
               )}
             />
@@ -175,7 +177,7 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
             </div>
           )}
 
-          {/* Floating score chip — top-left, always visible (Apple TV+ style). */}
+          {/* Score chip — top-left, fades out as the hover state takes over. */}
           {score > 0 && (
             <span
               className={cn(
@@ -209,32 +211,30 @@ export default function MovieCard({ media, priority }: MovieCardProps) {
             </div>
           )}
 
-          {/* Bottom info veil — appears on hover. */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 via-30% to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Hover veil — a single scrim and one clear action. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 via-40% to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="absolute inset-x-0 bottom-0 p-3 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-            <div className="flex items-center gap-1.5 text-[11px] text-white/85 uppercase tracking-wide font-semibold">
+            <div className="flex items-center gap-1.5 text-[11px] text-white/80 font-medium">
               <span className={ratingTone(score)}>
                 <Star className="inline size-3 fill-current -mt-0.5 mr-0.5" />
                 {score.toFixed(1)}
               </span>
-              <span className="text-white/40">·</span>
+              <span className="text-white/30">·</span>
               <span>{year || "—"}</span>
-              <span className="text-white/40">·</span>
-              <span>{type === "movie" ? "Movie" : "TV"}</span>
             </div>
-            <div className="mt-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-white/95 text-black font-semibold">
+            <div className="mt-2 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white text-black font-semibold">
               <Play className="size-3 fill-black" />
               Watch
             </div>
           </div>
         </div>
 
-        {/* Below-poster meta. Title goes white on hover (subtle but felt). */}
+        {/* Below-poster meta. */}
         <div className="mt-2.5 px-0.5">
-          <div className="text-sm font-medium leading-snug line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+          <div className="text-[0.8125rem] font-medium leading-snug line-clamp-1 text-white/90 group-hover:text-white transition-colors">
             {title}
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-0.5">
+          <div className="text-[0.6875rem] text-[var(--color-muted)] mt-0.5">
             {type === "movie" ? "Movie" : "TV"} · {year || "—"}
           </div>
         </div>

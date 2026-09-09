@@ -10,11 +10,9 @@ interface CarouselProps {
   title: string;
   items: MediaSummary[];
   priority?: boolean;
-  /** Use the display serif for the section heading. */
-  fancy?: boolean;
 }
 
-export default function Carousel({ title, items, priority, fancy }: CarouselProps) {
+export default function Carousel({ title, items, priority }: CarouselProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
@@ -69,23 +67,17 @@ export default function Carousel({ title, items, priority, fancy }: CarouselProp
   if (!items.length) return null;
 
   return (
-    <section className="px-4 sm:px-6 lg:px-10 py-7">
-      <div className="flex items-end justify-between mb-3.5">
-        <h2
-          className={cn(
-            "text-lg sm:text-xl tracking-tight",
-            fancy
-              ? "font-display italic text-2xl sm:text-3xl text-white"
-              : "font-semibold",
-          )}
-        >
-          {title}
-        </h2>
+    <section className="px-4 sm:px-6 lg:px-10 py-6">
+      <div className="flex items-center justify-between mb-4">
+        {/* One heading style for every rail. The old `fancy` variant put
+            a large italic serif on a single row, which read as a
+            different page rather than an emphasis. */}
+        <h2 className="section-title">{title}</h2>
         <div className="hidden sm:flex gap-1.5">
           <button
             onClick={() => scroll(-1)}
             disabled={atStart}
-            className="size-9 grid place-items-center rounded-full glass hover:bg-white/12 transition disabled:opacity-30 disabled:pointer-events-none"
+            className="size-8 grid place-items-center rounded-full glass hover:bg-white/15 transition disabled:opacity-25 disabled:pointer-events-none"
             aria-label="Scroll left"
           >
             <ChevronLeft className="size-4" />
@@ -93,7 +85,7 @@ export default function Carousel({ title, items, priority, fancy }: CarouselProp
           <button
             onClick={() => scroll(1)}
             disabled={atEnd}
-            className="size-9 grid place-items-center rounded-full glass hover:bg-white/12 transition disabled:opacity-30 disabled:pointer-events-none"
+            className="size-8 grid place-items-center rounded-full glass hover:bg-white/15 transition disabled:opacity-25 disabled:pointer-events-none"
             aria-label="Scroll right"
           >
             <ChevronRight className="size-4" />
